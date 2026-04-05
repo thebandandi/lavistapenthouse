@@ -1,42 +1,11 @@
 // netlify/functions/get-availability.js
-// Fetches blocked dates from:
-// 1. Airbnb iCal feed (live)
-// 2. VRBO iCal feed (add URL when ready)
-// 3. Booking.com iCal feed (add URL when ready)
-// 4. Direct bookings saved in Netlify Blobs
 
-const https = require("https");
-const http = require("http");
-const { getStore } = require("@netlify/blobs");
-
-// ── Add your iCal URLs here ──────────────────────────────────────────────────
 const ICAL_FEEDS = [
   {
     name: "Airbnb",
     url: "https://www.airbnb.com/calendar/ical/1034347605075023527.ics?t=54358584f4f546d8a2c2f7aad04f31ab&locale=es-419"
-  },
-  // Add VRBO and Booking.com URLs below when ready:
-  // { name: "VRBO", url: "https://..." },
-  // { name: "Booking.com", url: "https://..." },
+  }
 ];
-
-function fetchIcal(url) {
-  return new Promise((resolve) => {
-    const lib = url.startsWith("https") ? https : http;
-    const req = lib.request(url, { method: "GET", headers: { "User-Agent": "LaVistaPenthouse/1.0" } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        fetchIcal(res.headers.location).then(resolve);
-        return;
-      }
-      let data = "";
-      res.on("data", chunk => (data += chunk));
-      res.on("end", () => resolve(data));
-    });
-    req.on("error", () => resolve(""));
-    req.setTimeout(8000, () => { req.destroy(); resolve(""); });
-    req.end();
-  });
-}
 
 function parseIcal(icalData) {
   const blockedRanges = [];
@@ -66,61 +35,41 @@ function parseIcal(icalData) {
   return blockedRanges;
 }
 
-// Fetch direct bookings from Netlify Blobs
-async function fetchDirectBookings() {
-  try {
-    const store = getStore("direct-bookings");
-    const { blobs } = await store.list();
-    const ranges = [];
-    for (const blob of blobs) {
-      const booking = await store.get(blob.key, { type: "json" });
-      if (booking && booking.checkin && booking.checkout) {
-        ranges.push([booking.checkin, booking.checkout]);
-      }
-    }
-    console.log(`Direct bookings: ${ranges.length} found`);
-    return ranges;
-  } catch (err) {
-    console.warn("Could not fetch direct bookings:", err.message);
-    return [];
-  }
-}
-
 exports.handler = async () => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=1800", // Cache 30 mins
+    "Cache-Control": "public, max-age=1800", // Cache for 30 minutes
   };
 
   try {
-    // Fetch iCal feeds and direct bookings in parallel
-    const [icalResults, directRanges] = await Promise.all([
-      Promise.all(
-        ICAL_FEEDS.map(async (feed) => {
-          const data = await fetchIcal(feed.url);
-          const ranges = parseIcal(data);
-          console.log(`${feed.name}: ${ranges.length} blocked ranges`);
-          return ranges;
-        })
-      ),
-      fetchDirectBookings(),
-    ]);
+    // Fetch the Airbnb calendar using built-in fetching
+    const icalResults = await Promise.all(
+      ICAL_FEEDS.map(async (feed) => {
+        try {
+          const response = await fetch(feed.url, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" // Prevents Airbnb from blocking the request
+            }
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.text();
+          return parseIcal(data);
+        } catch (err) {
+          console.error(`Failed to fetch ${feed.name}:`, err);
+          return [];
+        }
+      })
+    );
 
-    // Merge all ranges
-    const allRanges = [...icalResults.flat(), ...directRanges];
-    console.log(`Total blocked ranges: ${allRanges.length}`);
+    const allRanges = icalResults.flat();
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         ranges: allRanges,
-        fetchedAt: new Date().toISOString(),
-        sources: {
-          ical: icalResults.map((r, i) => ({ name: ICAL_FEEDS[i].name, count: r.length })),
-          direct: directRanges.length,
-        }
+        fetchedAt: new Date().toISOString()
       }),
     };
   } catch (err) {
