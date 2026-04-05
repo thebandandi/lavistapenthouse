@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local News & Events — La Vista Penthouse Cabo San Lucas</title>
+<meta name="description" content="Stay up to date with the latest news, events, restaurants, and things to do in Cabo San Lucas from the team at La Vista Penthouse.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --sand:#f5efe6; --warm-white:#faf8f4; --terracotta:#c4714a; --deep-ocean:#1a3a4a; --gold:#c9a84c; --text:#1c1c1c; --muted:#6b6b6b; --border:#e0d8cc; --card-bg:#ffffff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--warm-white); color:var(--text); }
+  nav { position:sticky; top:0; z-index:100; background:rgba(250,248,244,0.93); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:16px 48px; }
+  .nav-logo { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; letter-spacing:.04em; color:var(--deep-ocean); text-decoration:none; }
+  .nav-logo span { color:var(--terracotta); }
+  .nav-back { font-size:13px; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:6px; transition:color .2s; }
+  .nav-back:hover { color:var(--deep-ocean); }
+  .hero { background:linear-gradient(160deg,var(--deep-ocean),#2a5a70); padding:80px 48px 60px; text-align:center; }
+  .hero h1 { font-family:'Cormorant Garamond',serif; font-size:52px; font-weight:400; color:#fff; margin-bottom:12px; }
+  .hero p { font-size:16px; color:rgba(255,255,255,0.7); max-width:520px; margin:0 auto; line-height:1.7; }
+  .blog-container { max-width:1100px; margin:0 auto; padding:60px 48px; }
+  .blog-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
+  .blog-card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; overflow:hidden; cursor:pointer; transition:all .2s; text-decoration:none; color:inherit; display:flex; flex-direction:column; }
+  .blog-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.1); }
+  .blog-card-img { width:100%; height:200px; object-fit:cover; display:block; background:var(--sand); }
+  .blog-card-img-placeholder { width:100%; height:200px; background:var(--sand); display:flex; align-items:center; justify-content:center; font-size:56px; }
+  .blog-card-body { padding:24px; flex:1; display:flex; flex-direction:column; }
+  .blog-card-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .blog-tag { background:var(--sand); color:var(--terracotta); font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; letter-spacing:.04em; text-transform:uppercase; }
+  .blog-card-title { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; color:var(--deep-ocean); margin-bottom:10px; line-height:1.3; }
+  .blog-card-excerpt { font-size:14px; color:var(--muted); line-height:1.7; flex:1; }
+  .blog-card-date { font-size:12px; color:var(--muted); margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+  .post-container { max-width:760px; margin:0 auto; padding:60px 48px; }
+  .post-header { margin-bottom:40px; }
+  .post-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .post-title { font-family:'Cormorant Garamond',serif; font-size:44px; font-weight:400; color:var(--deep-ocean); line-height:1.2; margin-bottom:16px; }
+  .post-date { font-size:13px; color:var(--muted); }
+  .post-divider { border:none; border-top:1px solid var(--border); margin:32px 0; }
+  .post-content p { font-size:16px; line-height:1.85; color:#3a3a3a; margin-bottom:20px; }
+  .post-content h3 { font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--deep-ocean); margin:32px 0 12px; }
+  .post-content ul { padding-left:24px; margin-bottom:20px; }
+  .post-content li { font-size:15px; line-height:1.8; color:#3a3a3a; margin-bottom:6px; }
+  .post-content strong { color:var(--text); font-weight:600; }
+  .post-cta { background:var(--sand); border-radius:16px; padding:32px; margin-top:48px; text-align:center; border:1px solid var(--border); }
+  .post-cta h3 { font-family:'Cormorant Garamond',serif; font-size:26px; color:var(--deep-ocean); margin-bottom:8px; }
+  .post-cta p { font-size:14px; color:var(--muted); margin-bottom:20px; }
+  .post-cta a { background:var(--deep-ocean); color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:500; transition:background .2s; display:inline-block; }
+  .post-cta a:hover { background:var(--terracotta); }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:14px; margin-bottom:32px; transition:color .2s; }
+  .back-link:hover { color:var(--deep-ocean); }
+  .loading { text-align:center; padding:80px 20px; color:var(--muted); font-size:15px; }
+  .empty { text-align:center; padding:80px 20px; }
+  .empty h3 { font-family:'Cormorant Garamond',serif; font-size:28px; color:var(--deep-ocean); margin-bottom:8px; }
+  .empty p { font-size:14px; color:var(--muted); }
+  footer { background:var(--deep-ocean); color:rgba(255,255,255,.7); padding:48px; text-align:center; margin-top:80px; }
+  footer .footer-logo { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:500; color:#fff; margin-bottom:8px; }
+  footer a { color:rgba(255,255,255,.5); text-decoration:none; margin:0 10px; font-size:12px; }
+  @media(max-width:900px) { nav{padding:14px 24px} .hero{padding:60px 24px 40px} .hero h1{font-size:36px} .blog-container{padding:40px 24px} .blog-grid{grid-template-columns:1fr} .post-container{padding:40px 24px} .post-title{font-size:32px} }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo">La Vista <span>Penthouse</span></a>
+  <a href="/" class="nav-back">← Back to booking</a>
+</nav>
+<div id="app"><div class="loading">Loading posts...</div></div>
+<footer>
+  <div class="footer-logo">La Vista Penthouse</div>
+  <p style="font-size:13px;margin-bottom:12px;">Cabo San Lucas, Baja California Sur, Mexico</p>
+  <a href="/">Home</a><a href="/blog.html">Local News & Events</a>
+  <p style="font-size:12px;margin-top:16px;">© 2026 La Vista Penthouse. All rights reserved.</p>
+</footer>
+<script>
+const EMOJI_MAP = {"things to do":"🌊","restaurants":"🍽️","dining":"🍽️","events":"🎉","festivals":"🎊","water":"🚤","tours":"⛵","travel":"✈️","news":"📰","beaches":"🏖️","nightlife":"🌙","entertainment":"🎵"};
+function getEmoji(tags=[],topic=""){const text=[...tags,topic].join(" ").toLowerCase();for(const[k,e]of Object.entries(EMOJI_MAP)){if(text.includes(k))return e;}return"🌴";}
+function formatDate(iso){return new Date(iso).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});}
+const params=new URLSearchParams(window.location.search);
+const postId=params.get("post");
+if(postId){renderSinglePost(postId);}else{renderBlogList();}
+async function renderBlogList(){
+  const app=document.getElementById("app");
+  try{
+    const res=await fetch("/api/blog-posts");
+    const posts=await res.json();
+    if(!posts.length){
+      app.innerHTML=`<div class="hero"><h1>Local News & Events</h1><p>Your insider guide to Cabo San Lucas — dining, activities, events, and travel tips.</p></div><div class="blog-container"><div class="empty"><h3>Coming Soon</h3><p>Our local Cabo blog is launching soon. Check back for dining guides, event listings, and insider tips.</p></div></div>`;
+      return;
+    }
+    const cards=posts.map(p=>{
+      const imgHtml = p.image
+        ? `<img class="blog-card-img" src="${p.image.thumb}" alt="${p.image.alt}" loading="lazy">`
+        : `<div class="blog-card-img-placeholder">${getEmoji(p.tags,p.topic)}</div>`;
+      return `<a class="blog-card" href="/blog.html?post=${p.id}">${imgHtml}<div class="blog-card-body"><div class="blog-card-tags">${(p.tags||[]).slice(0,2).map(t=>`<span class="blog-tag">${t}</span>`).join("")}</div><div class="blog-card-title">${p.title}</div><div class="blog-card-excerpt">${p.excerpt}</div><div class="blog-card-date">${formatDate(p.publishedAt)}</div></div></a>`;
+    }).join("");
+    app.innerHTML=`<div class="hero"><h1>Local News & Events</h1><p>Your insider guide to Cabo San Lucas — dining, activities, events, and travel tips from the La Vista team.</p></div><div class="blog-container"><div class="blog-grid">${cards}</div></div>`;
+  }catch(e){app.innerHTML=`<div class="loading">Could not load posts.</div>`;}
+}
+async function renderSinglePost(id){
+  const app=document.getElementById("app");
+  try{
+    const res=await fetch(`/api/blog-posts?id=${id}`);
+    if(!res.ok)throw new Error();
+    const post=await res.json();
+    const headerImg = post.image
+      ? `<img src="${post.image.url}" alt="${post.image.alt}" style="width:100%;height:420px;object-fit:cover;border-radius:16px;margin-bottom:40px;display:block;">
+         <p style="font-size:11px;color:var(--muted);margin-top:-32px;margin-bottom:40px;text-align:right;">Photo by <a href="${post.image.photographerUrl}" target="_blank" style="color:var(--muted);">${post.image.photographer}</a> on Unsplash</p>`
+      : '';
+    app.innerHTML=`<div class="post-container"><a href="/blog.html" class="back-link">← All posts</a>${headerImg}<div class="post-header"><div class="post-tags">${(post.tags||[]).map(t=>`<span class="blog-tag">${t}</span>`).join("")}</div><h1 class="post-title">${post.title}</h1><div class="post-date">Published ${formatDate(post.publishedAt)}</div></div><hr class="post-divider"><div class="post-content">${post.content}</div><div class="post-cta"><h3>Stay in the heart of Cabo</h3><p>La Vista Penthouse puts you in the perfect spot to experience everything Cabo has to offer.</p><a href="/">Book Direct & Save 5%</a></div></div>`;
+  }catch{app.innerHTML=`<div class="loading">Post not found. <a href="/blog.html">Back to all posts</a></div>`;}
+}
+</script>
+</body>
+</html>
