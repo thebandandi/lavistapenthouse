@@ -887,14 +887,28 @@ async function fetchLiveAvailability() {
     const res = await fetch('/.netlify/functions/get-availability');
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
-    if (data.ranges && data.ranges.length > 0) {
-      const allRanges = [...BOOKED_RANGES, ...data.ranges];
-      buildBookedSet(allRanges);
-      renderCalendar();
-      console.log(`Calendar synced: ${data.ranges.length} blocked ranges from Airbnb`);
+    
+    // 1. Always build the calendar, even if Airbnb has 0 blocked dates!
+    const liveRanges = data.ranges || [];
+    const allRanges = [...BOOKED_RANGES, ...liveRanges];
+    buildBookedSet(allRanges);
+    renderCalendar();
+    console.log(`Calendar synced: ${liveRanges.length} blocked ranges from Airbnb`);
+
+    // 2. THIS IS THE MISSING BATON: Update the text on the screen!
+    const syncStatusText = document.getElementById('cal-sync-status');
+    if (syncStatusText) {
+        syncStatusText.innerHTML = '✅ Synced with Airbnb';
+        syncStatusText.style.color = '#28a745'; 
     }
+
   } catch (err) {
-    console.warn('Live availability fetch failed, using static ranges:', err.message);
+    console.warn('Live availability fetch failed:', err.message);
+    const syncStatusText = document.getElementById('cal-sync-status');
+    if (syncStatusText) {
+        syncStatusText.innerHTML = '⚠️ Sync Offline - Using Static Dates';
+        syncStatusText.style.color = 'red';
+    }
   }
 }
 
