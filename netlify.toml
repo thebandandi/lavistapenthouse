@@ -1,14 +1,12 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+  command = "npm install"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+  node_version = "20"
 
 [[redirects]]
   from = "/blog"
@@ -20,11 +18,7 @@
   to = "/blog-admin.html"
   status = 200
 
-
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-
-[functions]
-  directory = "netlify/functions"
