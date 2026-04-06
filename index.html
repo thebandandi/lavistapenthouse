@@ -19,12 +19,14 @@
     .gallery-main { grid-column:1; grid-row:1/3; }
     .main-layout { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 380px; gap:80px; padding:60px 48px; }
     .property-title { font-family:'Cormorant Garamond',serif; font-size:42px; font-weight:500; color:var(--deep-ocean); margin-bottom:12px; }
+    .property-subtitle { font-size:15px; color:var(--muted); margin-bottom:20px; display:flex; gap:12px; }
     .booking-widget { position:sticky; top:88px; border:1px solid var(--border); border-radius:20px; padding:32px; background:var(--card-bg); box-shadow:0 8px 48px rgba(0,0,0,.08); }
     .book-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--deep-ocean),#2a5a70); color:#fff; border:none; border-radius:10px; cursor:pointer; font-weight:500; }
     .amenities-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:24px 0; }
     .amenity-item { display:flex; align-items:center; gap:12px; font-size:14px; }
-    .calendar-container { border:1px solid var(--border); border-radius:16px; margin-top:20px; background:white; padding:20px; text-align:center; }
+    .calendar-container { border:1px solid var(--border); border-radius:16px; margin-top:20px; background:white; padding:30px; text-align:center; }
     hr { border:none; border-top:1px solid var(--border); margin:32px 0; }
+    .review-card { padding:24px; border:1px solid var(--border); border-radius:16px; background:var(--card-bg); margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -39,32 +41,46 @@
 <div class="main-layout">
     <div class="left-col">
         <h1 class="property-title">La Vista Penthouse, Cabo Bay</h1>
-        <p style="color:var(--muted); margin-bottom:20px;">Entire condo · Cabo San Lucas, Mexico · ★ 5.0 · 5 reviews</p>
+        <div class="property-subtitle">
+            <span>Entire condo · Cabo San Lucas, Mexico</span>
+            <span>★ 5.0 · 5 reviews</span>
+        </div>
         <hr>
         <h3>About this space</h3>
-        <p style="line-height:1.8; margin-top:15px;">Experience CABO from the top. Enjoy a unique stay in our exclusive penthouse, featuring a spectacular private rooftop terrace with a private Jacuzzi and stunning views of the Arch.</p>
+        <p style="line-height:1.8; margin-top:15px; color:#3a3a3a;">Experience CABO from the top. Enjoy a unique stay in our exclusive penthouse, featuring a spectacular private rooftop terrace with a palapa, outdoor dining area, and best of all: a private Jacuzzi with stunning views of the Arch.</p>
         <hr>
         <h3>What this place offers</h3>
         <div class="amenities-grid">
-            <div class="amenity-item"><span>🍳</span> Fully equipped kitchen</div>
-            <div class="amenity-item"><span>📶</span> High-speed WiFi</div>
-            <div class="amenity-item"><span>🛁</span> Private jacuzzi</div>
-            <div class="amenity-item"><span>🏊</span> Shared infinity pool</div>
-            <div class="amenity-item"><span>❄️</span> Air conditioning</div>
-            <div class="amenity-item"><span>🔥</span> Rooftop BBQ grill</div>
+            <div class="amenity-item">🍳 Fully equipped kitchen</div>
+            <div class="amenity-item">📶 High-speed WiFi</div>
+            <div class="amenity-item">🛁 Private jacuzzi</div>
+            <div class="amenity-item">🏊 Shared infinity pool</div>
+            <div class="amenity-item">🅿️ Free on-site parking</div>
+            <div class="amenity-item">💼 Dedicated workspace</div>
+            <div class="amenity-item">❄️ Air conditioning</div>
+            <div class="amenity-item">🔥 Rooftop BBQ grill</div>
         </div>
         <hr>
         <h3>Availability</h3>
         <div class="calendar-container">
-            <div id="cal-status">🔄 Syncing with Airbnb...</div>
+            <div id="cal-status" style="font-weight: 500;">🔄 Syncing with Airbnb...</div>
+            <p style="font-size: 13px; color: #666; margin-top: 10px;">Blocked dates are automatically updated from Airbnb.</p>
+        </div>
+        <hr>
+        <h3>Reviews</h3>
+        <div class="review-card">
+            <strong>Maria G.</strong><p style="font-size: 14px; margin-top: 5px;">"Absolutely incredible stay! The rooftop jacuzzi with views of the Arch was breathtaking at sunset."</p>
+        </div>
+        <div class="review-card">
+            <strong>Thomas R.</strong><p style="font-size: 14px; margin-top: 5px;">"This penthouse exceeded every expectation. The photos don't do it justice — the views are even more stunning in person."</p>
         </div>
     </div>
 
     <div class="right-col">
         <div class="booking-widget">
-            <div style="font-size:32px; font-weight:600; margin-bottom:10px;">$350 <span style="font-size:16px; font-weight:400; color:var(--muted);">/ night</span></div>
+            <div style="font-size:36px; font-family:'Cormorant Garamond',serif; font-weight:600; margin-bottom:10px;">$350 <span style="font-size:16px; font-weight:400; color:var(--muted);">/ night</span></div>
             <button class="book-btn">Reserve Now</button>
-            <p style="font-size:12px; text-align:center; margin-top:15px; color:var(--muted);">🏷️ 5% Direct Booking Discount Included</p>
+            <p style="font-size:12px; text-align:center; margin-top:20px; color:var(--muted);">🏷️ Direct Booking: 5% Discount Applied</p>
         </div>
     </div>
 </div>
@@ -75,11 +91,10 @@
             const res = await fetch('/api/get-availability');
             const data = await res.json();
             if (data.ranges) {
-                document.getElementById('cal-status').innerHTML = "✅ <strong>Sync Successful</strong>: " + data.ranges.length + " dates blocked.";
-                document.getElementById('cal-status').style.color = "#2d7d46";
+                document.getElementById('cal-status').innerHTML = "<span style='color:#2d7d46'>✅ Airbnb Sync Successful</span><br><span style='font-size:14px; color:#666;'>" + data.ranges.length + " dates are currently blocked.</span>";
             }
         } catch (e) {
-            document.getElementById('cal-status').textContent = "⚠️ Offline: Using local backup dates.";
+            document.getElementById('cal-status').textContent = "⚠️ Sync Error: Using backup dates.";
         }
     }
     checkSync();
