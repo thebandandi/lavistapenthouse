@@ -1,7 +1,7 @@
 {
   "name": "lavista-penthouse",
   "version": "1.0.0",
-  "description": "Booking Website",
+  "private": true,
   "dependencies": {
     "@sendgrid/mail": "^8.1.1",
     "@netlify/blobs": "^0.2.0"
