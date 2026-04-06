@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Booking Website",
   "dependencies": {
-    "@sendgrid/mail": "^8.1.1"
+    "@sendgrid/mail": "^8.1.1",
+    "@netlify/blobs": "^0.2.0"
   }
 }
