@@ -884,7 +884,7 @@ buildBookedSet(BOOKED_RANGES);
 // Then fetch live iCal data from Airbnb/VRBO/Booking.com
 async function fetchLiveAvailability() {
   try {
-    const res = await fetch('/api/get-availability');
+    const res = await fetch('/.netlify/functions/get-availability');
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
     if (data.ranges && data.ranges.length > 0) {
