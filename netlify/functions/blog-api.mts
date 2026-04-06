@@ -44,7 +44,7 @@ export default async (req: Request) => {
     const { action, postId, adminKey } = body;
 
     // Simple admin key check — set ADMIN_KEY in Netlify env vars
-    if (adminKey !== process.env.ADMIN_KEY) {
+    if (adminKey !== process.env.BLOG_ADMIN_PASSWORD) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
     }
 
