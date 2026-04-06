@@ -19,24 +19,28 @@
   .gallery-main { grid-column:1; grid-row:1/3; }
   .main-layout { max-width:1200px; margin:0 auto; display:grid; grid-template-columns:1fr 380px; gap:80px; padding:60px 48px; }
   .property-title { font-family:'Cormorant Garamond',serif; font-size:42px; font-weight:500; color:var(--deep-ocean); margin-bottom:12px; }
-  .rating-badge { display:inline-flex; align-items:center; gap:5px; background:var(--deep-ocean); color:#fff; padding:4px 12px; border-radius:20px; font-size:13px; }
   .booking-widget { position:sticky; top:88px; border:1px solid var(--border); border-radius:20px; padding:32px; background:var(--card-bg); box-shadow:0 8px 48px rgba(0,0,0,.08); }
-  .calendar-container { border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card-bg); margin-top:20px; }
-  .cal-header { display:flex; justify-content:space-between; align-items:center; padding:15px; background:var(--sand); }
-  .cal-grid { display:grid; grid-template-columns:repeat(7, 1fr); padding:10px; gap:5px; }
-  .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:50%; cursor:pointer; }
+  .book-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--deep-ocean),#2a5a70); color:#fff; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; cursor:pointer; transition:all .2s; margin-bottom:12px; }
+  .book-btn:hover { background:linear-gradient(135deg,var(--terracotta),#d4825a); }
+  .calendar-container { border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card-bg); margin-top:24px; }
+  .cal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:var(--sand); }
+  .cal-days { display:grid; grid-template-columns:repeat(7, 1fr); padding:10px; gap:2px; }
+  .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:50%; cursor:pointer; transition:all .15s; }
   .cal-day.booked { color:var(--border); text-decoration:line-through; cursor:not-allowed; }
   .cal-day.selected { background:var(--deep-ocean); color:white; }
-  .book-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--deep-ocean),#2a5a70); color:#fff; border:none; border-radius:10px; font-weight:500; cursor:pointer; margin-top:15px; }
+  .amenities-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:24px 0; }
+  .amenity-item { display:flex; align-items:center; gap:12px; font-size:14px; }
+  .review-card { padding:24px; border:1px solid var(--border); border-radius:16px; background:var(--card-bg); margin-bottom:20px; }
 </style>
 </head>
 <body>
+
 <nav>
   <div class="nav-logo">La Vista <span>Penthouse</span></div>
-  <div style="display:flex;gap:20px;font-size:13px;text-transform:uppercase;letter-spacing:1px;">
-    <a href="#photos" style="text-decoration:none;color:var(--muted)">Photos</a>
-    <a href="#amenities" style="text-decoration:none;color:var(--muted)">Amenities</a>
-    <a href="#reviews" style="text-decoration:none;color:var(--muted)">Reviews</a>
+  <div style="display:flex; gap:32px;">
+    <a href="#photos" style="text-decoration:none; color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.06em;">Photos</a>
+    <a href="#amenities" style="text-decoration:none; color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.06em;">Amenities</a>
+    <a href="#reviews" style="text-decoration:none; color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.06em;">Reviews</a>
   </div>
 </nav>
 
@@ -48,64 +52,81 @@
 
 <div class="main-layout">
   <div class="left-col">
-    <h1 class="property-title">La Vista Penthouse, Cabo Bay</h1>
-    <div style="margin-bottom:20px;"><span class="rating-badge">★ 5.0 · 5 reviews</span> <span style="margin-left:10px;color:var(--muted)">Cabo San Lucas, Mexico</span></div>
-    <p style="line-height:1.8;color:#3a3a3a;margin-bottom:30px;">Luxury penthouse with private jacuzzi and spectacular views. Featuring three bedrooms, a fully equipped kitchen, and a rooftop terrace perfect for watching the sunset over the Arch.</p>
+    <h1 class="property-title">La Vista Penthouse,<br>towards Cabo Bay</h1>
+    <div style="margin-bottom:20px; font-size:15px; color:var(--muted);">
+      <span>Entire condo · Cabo San Lucas, Mexico</span> · <span style="background:var(--deep-ocean); color:white; padding:2px 8px; border-radius:12px;">★ 5.0</span>
+    </div>
+    <p style="line-height:1.8; color:#3a3a3a; margin-bottom:32px;">Luxury 3-bedroom penthouse with private rooftop jacuzzi, stunning Arch views, and 5-star hosting. Perfect for groups up to 6.</p>
     
+    <hr>
+    <h3>Amenities</h3>
+    <div class="amenities-grid" id="amenities">
+      <div class="amenity-item">🍳 Fully equipped kitchen</div>
+      <div class="amenity-item">📶 High-speed WiFi</div>
+      <div class="amenity-item">🛁 Private jacuzzi</div>
+      <div class="amenity-item">🏊 Shared infinity pool</div>
+      <div class="amenity-item">❄️ Air conditioning</div>
+      <div class="amenity-item">🔥 Rooftop BBQ grill</div>
+    </div>
+
+    <hr>
     <div class="calendar-container">
-      <div class="cal-header"><strong>Availability</strong> <span id="sync-indicator" style="font-size:12px;color:var(--success)">🔄 Syncing...</span></div>
-      <div class="cal-grid" id="calendar-days"></div>
+      <div class="cal-header"><strong>Availability</strong> <span id="cal-sync" style="font-size:12px; color:var(--success);">🔄 Syncing...</span></div>
+      <div class="cal-days" id="calendar-grid"></div>
+    </div>
+
+    <hr>
+    <h3>Reviews</h3>
+    <div class="review-card" id="reviews">
+      <strong>Maria G.</strong>
+      <p style="font-size:14px; color:#3a3a3a; margin-top:8px;">"Absolutely incredible stay! The rooftop jacuzzi with views of the Arch was breathtaking."</p>
     </div>
   </div>
 
   <div class="right-col">
     <div class="booking-widget">
-      <div style="font-size:32px;font-weight:600;">$350 <span style="font-size:16px;font-weight:400;color:var(--muted)">/ night</span></div>
-      <div style="margin:20px 0;border:1px solid var(--border);border-radius:8px;padding:10px;">
-        <label style="font-size:10px;text-transform:uppercase;color:var(--muted)">Check-in / Checkout</label>
-        <div style="font-size:14px;">Select dates on calendar</div>
+      <div style="font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:600;">$350 <span style="font-size:16px; font-weight:400; color:var(--muted);">/ night</span></div>
+      <div style="margin:20px 0; border:1px solid var(--border); border-radius:10px; padding:12px;">
+        <label style="font-size:10px; text-transform:uppercase; color:var(--muted); display:block;">Dates</label>
+        <span style="font-size:14px;">Select on calendar</span>
       </div>
       <button class="book-btn">Reserve Now</button>
+      <div style="text-align:center; font-size:12px; color:var(--muted);">🏷️ Direct Booking Discount Applied</div>
     </div>
   </div>
 </div>
 
 <script>
-  // CALENDAR LOGIC
-  let bookedDates = new Set();
-  async function fetchDates() {
+  let booked = new Set();
+  async function sync() {
     try {
       const res = await fetch('/api/get-availability');
       const data = await res.json();
       if(data.ranges) {
         data.ranges.forEach(([s, e]) => {
           let d = new Date(s);
-          while(d <= new Date(e)) {
-            bookedDates.add(d.toISOString().split('T')[0]);
-            d.setDate(d.getDate() + 1);
-          }
+          while(d <= new Date(e)) { booked.add(d.toISOString().split('T')[0]); d.setDate(d.getDate()+1); }
         });
-        document.getElementById('sync-indicator').textContent = "✅ Synced with Airbnb";
-        renderCalendar();
+        document.getElementById('cal-sync').textContent = "✅ Synced with Airbnb";
+        render();
       }
-    } catch(e) { document.getElementById('sync-indicator').textContent = "⚠️ Offline"; }
+    } catch(e) { document.getElementById('cal-sync').textContent = "⚠️ Offline"; }
   }
 
-  function renderCalendar() {
-    const grid = document.getElementById('calendar-days');
+  function render() {
+    const grid = document.getElementById('calendar-grid');
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     grid.innerHTML = '';
-    for(let i=1; i<=daysInMonth; i++) {
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-      const day = document.createElement('div');
-      day.className = 'cal-day' + (bookedDates.has(dateStr) ? ' booked' : '');
-      day.textContent = i;
-      grid.appendChild(day);
+    for(let i=1; i<=days; i++) {
+      const ds = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+      const el = document.createElement('div');
+      el.className = 'cal-day' + (booked.has(ds) ? ' booked' : '');
+      el.textContent = i;
+      grid.appendChild(el);
     }
   }
-  fetchDates();
-  renderCalendar();
+  sync(); render();
 </script>
 </body>
 </html>
