@@ -247,4 +247,4 @@ Format exactly like this:
   }
 };
 
-export const config = { schedule: "@daily" };
+export const config = { schedule: "0 0 * * 1" };
