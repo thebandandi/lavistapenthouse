@@ -11,7 +11,6 @@ export default async (req) => {
   const drafts = url.searchParams.get("drafts");
   const password = url.searchParams.get("password");
 
-  // We now use the same secret key you set in Netlify!
   const isAdmin = password === process.env.BLOG_ADMIN_PASSWORD;
 
   try {
@@ -33,6 +32,17 @@ export default async (req) => {
         const post = await store.get(blob.key, { type: "json" });
         if (!post) continue;
 
+        // --- IMAGE REPAIR LOGIC ---
+        // If the image is the "bundle" from Unsplash, we extract just the URL 
+        // so the website can actually display it.
+        if (post.image && typeof post.image === 'object' && post.image.url) {
+          post.displayImage = post.image.url;
+        } else if (typeof post.image === 'string') {
+          post.displayImage = post.image;
+        } else {
+          post.displayImage = "/images/default-blog.jpg"; // Fallback if no image exists
+        }
+
         if (drafts && isAdmin) {
           if (post.status === "draft") posts.push(post);
         } else {
@@ -44,10 +54,8 @@ export default async (req) => {
     }
 
     posts.sort((a, b) => new Date(b.publishedAt || b.createdAt) - new Date(a.publishedAt || a.createdAt));
-
     return new Response(JSON.stringify(posts), { status: 200, headers });
   } catch (err) {
-    console.error("Blog fetch error:", err);
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
   }
 };
