@@ -45,44 +45,27 @@
   .post-actions { display:flex; gap:10px; flex-wrap:wrap; }
   .btn { padding:9px 20px; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .2s; }
   .btn-publish { background:var(--success); color:#fff; }
-  .btn-publish:hover { opacity:.85; }
   .btn-preview { background:var(--sand); color:var(--deep-ocean); border:1.5px solid var(--border); }
-  .btn-preview:hover { background:var(--border); }
   .btn-delete { background:none; color:var(--error); border:1.5px solid var(--error); }
-  .btn-delete:hover { background:var(--error); color:#fff; }
   .btn-unpublish { background:none; color:var(--muted); border:1.5px solid var(--border); }
-  .btn-unpublish:hover { background:var(--border); }
   .status-badge { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:3px 10px; border-radius:20px; flex-shrink:0; }
   .badge-draft { background:#fff3cd; color:#856404; }
   .badge-published { background:#d4edda; color:var(--success); }
-  .empty-state { text-align:center; padding:60px; color:var(--muted); }
-  .empty-state h3 { font-family:'Cormorant Garamond',serif; font-size:24px; color:var(--deep-ocean); margin-bottom:8px; }
 
-  /* PREVIEW MODAL */
+  /* MODALS & UI */
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500; align-items:center; justify-content:center; padding:20px; }
   .modal-overlay.open { display:flex; }
   .modal { background:#fff; border-radius:16px; padding:40px; max-width:700px; width:100%; max-height:85vh; overflow-y:auto; }
   .modal-hero-img { width: 100%; height: 300px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; }
-  .modal h2 { font-family:'Cormorant Garamond',serif; font-size:28px; color:var(--deep-ocean); margin-bottom:8px; }
-  .modal-meta { font-size:13px; color:var(--muted); margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border); }
-  .modal-content { font-size:15px; line-height:1.8; color:#333; }
-  .modal-content h2 { font-size:22px; margin:28px 0 10px; }
-  .modal-content p { margin-bottom:16px; }
   .modal-close { float:right; background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted); }
-
-  /* GENERATE BTN */
   .generate-section { background:var(--sand); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-  .generate-section p { font-size:14px; color:var(--muted); }
-  .btn-generate { background:var(--deep-ocean); color:#fff; padding:11px 24px; border-radius:6px; border:none; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:background .2s; display:flex; align-items:center; gap:8px; }
-  .btn-generate:hover { background:var(--terracotta); }
-  .btn-generate:disabled { opacity:.6; cursor:not-allowed; }
+  .btn-generate { background:var(--deep-ocean); color:#fff; padding:11px 24px; border-radius:6px; border:none; cursor:pointer; font-weight:500; }
   .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); padding:12px 24px; border-radius:8px; font-size:14px; z-index:9999; opacity:0; transition:opacity .3s; pointer-events:none; }
   .toast.show { opacity:1; }
   .toast.success { background:var(--success); color:#fff; }
   .toast.error { background:var(--error); color:#fff; }
-  .toast.info { background:var(--deep-ocean); color:#fff; }
 </style>
 </head>
 <body>
@@ -98,7 +81,7 @@
     <p>Enter your admin key to manage blog posts.</p>
     <input type="password" class="login-input" id="admin-key-input" placeholder="Admin key" onkeydown="if(event.key==='Enter')login()">
     <button class="login-btn" onclick="login()">Sign In</button>
-    <p class="login-error" id="login-error">Incorrect admin key. Please try again.</p>
+    <p class="login-error" id="login-error">Incorrect admin key.</p>
   </div>
 </div>
 
@@ -109,12 +92,10 @@
 
     <div class="generate-section">
       <div>
-        <strong style="font-size:14px;">Generate a new post now</strong>
-        <p>Manually trigger the AI to write a new Cabo blog post draft.</p>
+        <strong style="font-size:14px;">Weekly Schedule: Enabled</strong>
+        <p>Posts generate automatically every Monday. Use this button for extras.</p>
       </div>
-      <button class="btn-generate" id="gen-btn" onclick="generatePost()">
-        ✨ Generate New Draft
-      </button>
+      <button class="btn-generate" id="gen-btn" onclick="generatePost()">✨ Generate Extra Draft</button>
     </div>
 
     <div class="tabs">
@@ -122,12 +103,8 @@
       <button class="tab" onclick="switchTab('published',this)">Published <span id="pub-count"></span></button>
     </div>
 
-    <div id="drafts-panel">
-      <div class="post-list" id="drafts-list"></div>
-    </div>
-    <div id="published-panel" style="display:none;">
-      <div class="post-list" id="published-list"></div>
-    </div>
+    <div id="drafts-panel"><div class="post-list" id="drafts-list"></div></div>
+    <div id="published-panel" style="display:none;"><div class="post-list" id="published-list"></div></div>
   </div>
 </div>
 
@@ -147,18 +124,14 @@
 let adminKey = '';
 let allPosts = [];
 
-// ── LOGIN ────────────────────────────────────────────────────────────────────
 async function login() {
   const key = document.getElementById('admin-key-input').value.trim();
   if (!key) return;
+  // We test the key by asking for the full list
   try {
-    const testRes = await fetch('/api/blog-api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list', postId: 'test', adminKey: key })
-    });
-    const data = await testRes.json();
-    if (data.error === 'Unauthorized') {
+    const res = await fetch(`/api/blog-posts?drafts=1&password=${key}`);
+    const data = await res.json();
+    if (data.error) {
       document.getElementById('login-error').style.display = 'block';
       return;
     }
@@ -181,31 +154,25 @@ window.addEventListener('load', () => {
   if (saved) { adminKey = saved; showAdmin(); }
 });
 
-// ── LOAD POSTS ───────────────────────────────────────────────────────────────
 async function loadAllPosts() {
   try {
-    // This fetches both drafts and published for the admin view
     const res = await fetch(`/api/blog-posts?drafts=1&password=${adminKey}`);
     const posts = await res.json();
-    
-    if (posts.error) {
-      console.error("API Error:", posts.error);
-      return;
-    }
-
     allPosts = posts || [];
     renderLists();
-  } catch (err) {
-    console.error("Load error:", err);
+  } catch {
     showToast('Could not load posts', 'error');
   }
 }
 
 function renderLists() {
-  const drafts = allPosts.filter(p => p.status === 'draft');
-  const published = allPosts.filter(p => p.status === 'published');
-  document.getElementById('draft-count').textContent = drafts.length ? `(${drafts.length})` : '';
-  document.getElementById('pub-count').textContent = published.length ? `(${published.length})` : '';
+  // Case-insensitive filtering ensures your 3 posts show up!
+  const drafts = allPosts.filter(p => p.status && p.status.toLowerCase() === 'draft');
+  const published = allPosts.filter(p => p.status && p.status.toLowerCase() === 'published');
+  
+  document.getElementById('draft-count').textContent = `(${drafts.length})`;
+  document.getElementById('pub-count').textContent = `(${published.length})`;
+  
   renderPostList('drafts-list', drafts, 'draft');
   renderPostList('published-list', published, 'published');
 }
@@ -213,24 +180,21 @@ function renderLists() {
 function renderPostList(containerId, posts, type) {
   const el = document.getElementById(containerId);
   if (!posts.length) {
-    el.innerHTML = `<div class="empty-state"><h3>${type === 'draft' ? 'No drafts yet' : 'No published posts yet'}</h3><p>${type === 'draft' ? 'Generate a new draft above.' : 'Publish a draft to see it here.'}</p></div>`;
+    el.innerHTML = `<div class="empty-state"><h3>Empty</h3><p>No ${type} posts found.</p></div>`;
     return;
   }
   
   el.innerHTML = posts.map(post => {
     const thumbUrl = post.displayImage || (post.image && post.image.thumb) || (post.image && post.image.url) || '/images/default-blog.jpg';
-    
     return `
-    <div class="post-item" id="item-${post.id}">
-      <img class="post-item-img" src="${thumbUrl}" alt="Post thumbnail">
+    <div class="post-item">
+      <img class="post-item-img" src="${thumbUrl}" alt="Thumbnail">
       <div class="post-item-content">
         <div class="post-item-header">
-          <div>
-            <div class="post-item-title">${post.title}</div>
-            <div class="post-item-meta">${fmtDate(post.createdAt)} · ${post.topic || 'Cabo Guide'}</div>
-          </div>
+          <div class="post-item-title">${post.title}</div>
           <span class="status-badge ${type === 'draft' ? 'badge-draft' : 'badge-published'}">${type}</span>
         </div>
+        <div class="post-item-meta">${fmtDate(post.createdAt)} · ${post.topic || 'Cabo News'}</div>
         <p class="post-item-excerpt">${post.excerpt}</p>
         <div class="post-actions">
           <button class="btn btn-preview" onclick='previewPost(${JSON.stringify(post).replace(/'/g,"&apos;")})'>👁 Preview</button>
@@ -244,89 +208,49 @@ function renderPostList(containerId, posts, type) {
     </div>`}).join('');
 }
 
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 
-// ── ACTIONS ──────────────────────────────────────────────────────────────────
-async function publishPost(postId) {
-  await apiAction('publish', postId);
-  showToast('✅ Post published!', 'success');
-  await loadAllPosts();
-}
-
-async function unpublishPost(postId) {
-  // This helps toggle posts back to drafts if you change your mind
-  await apiAction('unpublish', postId);
-  showToast('Post moved back to drafts', 'info');
-  await loadAllPosts();
-}
-
-async function deletePost(postId) {
-  if (!confirm('Permanently delete this post?')) return;
-  await apiAction('delete', postId);
-  showToast('Post deleted', 'info');
-  await loadAllPosts();
-}
+async function publishPost(postId) { await apiAction('publish', postId); await loadAllPosts(); showToast('Post Published!', 'success'); }
+async function unpublishPost(postId) { await apiAction('unpublish', postId); await loadAllPosts(); showToast('Moved to Drafts', 'success'); }
+async function deletePost(postId) { if(confirm('Delete forever?')) { await apiAction('delete', postId); await loadAllPosts(); } }
 
 async function apiAction(action, postId) {
-  const res = await fetch('/api/blog-api', {
+  return fetch('/api/blog-api', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, postId, adminKey })
-  });
-  return res.json();
+  }).then(r => r.json());
 }
 
 async function generatePost() {
   const btn = document.getElementById('gen-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Generating...';
+  btn.disabled = true; btn.innerText = 'Generating...';
   try {
-    const res = await fetch('/api/generate-blog-post', { method: 'POST' });
-    const data = await res.json();
-    if (data.success || data.title) {
-      showToast(`✅ Draft created: "${data.title}"`, 'success');
-      await loadAllPosts();
-    } else {
-      showToast('Generation failed.', 'error');
-    }
-  } catch {
-    showToast('Error generating post', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '✨ Generate New Draft';
-  }
+    await fetch('/api/generate-blog-post', { method: 'POST' });
+    await loadAllPosts();
+    showToast('Extra Draft Created!', 'success');
+  } finally { btn.disabled = false; btn.innerText = '✨ Generate Extra Draft'; }
 }
 
-// ── PREVIEW ──────────────────────────────────────────────────────────────────
 function previewPost(post) {
   const fullUrl = post.displayImage || (post.image && post.image.url) || '';
   document.getElementById('preview-hero').src = fullUrl;
-  document.getElementById('preview-hero').style.display = fullUrl ? 'block' : 'none';
   document.getElementById('preview-title').textContent = post.title;
-  document.getElementById('preview-meta').textContent = `${fmtDate(post.createdAt)} · ${post.topic || 'Cabo Guide'}`;
   document.getElementById('preview-content').innerHTML = post.content;
   document.getElementById('preview-modal').classList.add('open');
 }
 
-function closePreview(e) {
-  if (!e || e.target.classList.contains('modal-overlay') || e.target.classList.contains('modal-close')) {
-    document.getElementById('preview-modal').classList.remove('open');
-  }
-}
-
+function closePreview(e) { document.getElementById('preview-modal').classList.remove('open'); }
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('drafts-panel').style.display = tab === 'drafts' ? 'block' : 'none';
   document.getElementById('published-panel').style.display = tab === 'published' ? 'block' : 'none';
 }
-
-function showToast(msg, type = 'info') {
+function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3500);
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 </script>
 </body>
