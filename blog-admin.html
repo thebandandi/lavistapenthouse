@@ -147,6 +147,7 @@
 let adminKey = '';
 let allPosts = [];
 
+// ── LOGIN ────────────────────────────────────────────────────────────────────
 async function login() {
   const key = document.getElementById('admin-key-input').value.trim();
   if (!key) return;
@@ -180,14 +181,22 @@ window.addEventListener('load', () => {
   if (saved) { adminKey = saved; showAdmin(); }
 });
 
+// ── LOAD POSTS ───────────────────────────────────────────────────────────────
 async function loadAllPosts() {
   try {
-    // Corrected to use the new blog-posts engine with image repair logic
+    // This fetches both drafts and published for the admin view
     const res = await fetch(`/api/blog-posts?drafts=1&password=${adminKey}`);
     const posts = await res.json();
+    
+    if (posts.error) {
+      console.error("API Error:", posts.error);
+      return;
+    }
+
     allPosts = posts || [];
     renderLists();
-  } catch {
+  } catch (err) {
+    console.error("Load error:", err);
     showToast('Could not load posts', 'error');
   }
 }
@@ -209,7 +218,6 @@ function renderPostList(containerId, posts, type) {
   }
   
   el.innerHTML = posts.map(post => {
-    // Handle the Unsplash object vs simple string
     const thumbUrl = post.displayImage || (post.image && post.image.thumb) || (post.image && post.image.url) || '/images/default-blog.jpg';
     
     return `
@@ -226,7 +234,10 @@ function renderPostList(containerId, posts, type) {
         <p class="post-item-excerpt">${post.excerpt}</p>
         <div class="post-actions">
           <button class="btn btn-preview" onclick='previewPost(${JSON.stringify(post).replace(/'/g,"&apos;")})'>👁 Preview</button>
-          ${type === 'draft' ? `<button class="btn btn-publish" onclick="publishPost('${post.id}')">✅ Publish</button>` : `<button class="btn btn-unpublish" onclick="unpublishPost('${post.id}')">↩ Unpublish</button>`}
+          ${type === 'draft' ? 
+            `<button class="btn btn-publish" onclick="publishPost('${post.id}')">✅ Publish</button>` : 
+            `<button class="btn btn-unpublish" onclick="unpublishPost('${post.id}')">↩ Unpublish</button>`
+          }
           <button class="btn btn-delete" onclick="deletePost('${post.id}')">🗑 Delete</button>
         </div>
       </div>
@@ -237,9 +248,17 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// ── ACTIONS ──────────────────────────────────────────────────────────────────
 async function publishPost(postId) {
   await apiAction('publish', postId);
   showToast('✅ Post published!', 'success');
+  await loadAllPosts();
+}
+
+async function unpublishPost(postId) {
+  // This helps toggle posts back to drafts if you change your mind
+  await apiAction('unpublish', postId);
+  showToast('Post moved back to drafts', 'info');
   await loadAllPosts();
 }
 
@@ -270,7 +289,7 @@ async function generatePost() {
       showToast(`✅ Draft created: "${data.title}"`, 'success');
       await loadAllPosts();
     } else {
-      showToast('Generation failed. Check your API keys.', 'error');
+      showToast('Generation failed.', 'error');
     }
   } catch {
     showToast('Error generating post', 'error');
@@ -280,6 +299,7 @@ async function generatePost() {
   }
 }
 
+// ── PREVIEW ──────────────────────────────────────────────────────────────────
 function previewPost(post) {
   const fullUrl = post.displayImage || (post.image && post.image.url) || '';
   document.getElementById('preview-hero').src = fullUrl;
