@@ -5,9 +5,9 @@ import ical from "ical";
 // ── THE MASTER CALENDAR LIST ────────────────────────────────────────────────
 // This is where your site "listens" to other platforms.
 const ICAL_SOURCES = {
-  airbnb: "https://www.airbnb.com/calendar/ical/YOUR_AIRBNB_LINK_HERE.ics", 
+  airbnb: "https://www.airbnb.com/calendar/ical/1034347605075023527.ics?t=54358584f4f546d8a2c2f7aad04f31ab&locale=es-419", 
   vrbo: "https://www.vrbo.com/icalendar/3455eef8b26146a79e73f68d86f6448c.ics?nonTentative",
-  bookingCom: "" // Leave blank until manager sends it
+  bookingCom: "" // ⬅️ Paste the Booking.com link here when you get it!
 };
 
 export default async (req) => {
@@ -30,11 +30,11 @@ export default async (req) => {
         for (let k in data) {
           if (data[k].type === 'VEVENT') {
             const ev = data[k];
-            allBlockedDates.push({
-              start: ev.start.toISOString().split('T')[0],
-              end: ev.end.toISOString().split('T')[0],
-              source: platform
-            });
+            // Format to YYYY-MM-DD
+            const start = ev.start.toISOString().split('T')[0];
+            const end = ev.end.toISOString().split('T')[0];
+            
+            allBlockedDates.push({ start, end, source: platform });
           }
         }
       } catch (e) {
@@ -49,6 +49,7 @@ export default async (req) => {
     for (const blob of blobs) {
       const booking = await store.get(blob.key, { type: "json" });
       if (booking) {
+        // Support both naming conventions
         const start = booking.checkin || booking.startDate;
         const end = booking.checkout || booking.endDate;
         if (start && end) {
@@ -56,6 +57,9 @@ export default async (req) => {
         }
       }
     }
+
+    // Sort dates so the calendar loads cleanly
+    allBlockedDates.sort((a, b) => new Date(a.start) - new Date(b.start));
 
     return new Response(JSON.stringify({ blockedDates: allBlockedDates }), {
       status: 200,
