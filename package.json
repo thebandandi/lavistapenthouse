@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@sendgrid/mail": "^8.1.1",
-    "@netlify/blobs": "^10.7.4"
+    "@netlify/blobs": "^10.7.4",
+    "axios": "^1.6.0",
+    "ical": "^0.8.0"
   }
 }
