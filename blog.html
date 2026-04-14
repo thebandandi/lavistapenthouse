@@ -54,7 +54,7 @@
                                  "/images/default-blog.jpg";
 
                     // 2. SMART DATE SELECTION
-                    const postDate = p.publishedAt || p.date || p.createdAt;
+                    const postDate = p.publishedAt || p.createdAt || p.date;
                     
                     return `
                         <article class="post-card">
