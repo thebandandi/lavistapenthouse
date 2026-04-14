@@ -219,7 +219,11 @@ function renderPostList(containerId, posts, type) {
           <div class="post-item-title">${post.title}</div>
           <span class="status-badge ${type === 'draft' ? 'badge-draft' : 'badge-published'}">${type}</span>
         </div>
-        <div class="post-item-meta">${fmtDate(post.date || post.createdAt)}</div>
+        // Replace your Step 3 line with this if you want more detail:
+<div class="post-item-meta">
+    Draft Created: ${fmtDate(post.createdAt || post.date)} 
+    ${post.publishedAt ? ` | Published: ${fmtDate(post.publishedAt)}` : ''}
+</div>
         <div class="post-actions">
           <button class="btn btn-edit" onclick="openEdit('${post.id}')">✏️ Edit</button>
           ${type === 'draft' ? 
