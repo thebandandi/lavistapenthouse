@@ -205,10 +205,15 @@ function renderPostList(containerId, posts, type) {
   }
   
   el.innerHTML = posts.map(post => {
-    const thumbUrl = post.displayImage || '/images/default-blog.jpg';
+    // FIX: This looks for the image in every possible place the AI might have saved it
+    const thumbUrl = post.displayImage || 
+                     (post.image && post.image.url) || 
+                     (post.image && post.image.thumb) || 
+                     '/images/default-blog.jpg';
+
     return `
     <div class="post-item">
-      <img class="post-item-img" src="${thumbUrl}" alt="Thumbnail">
+      <img class="post-item-img" src="${thumbUrl}" alt="Thumbnail" onerror="this.src='/images/default-blog.jpg'">
       <div class="post-item-content">
         <div class="post-item-header">
           <div class="post-item-title">${post.title}</div>
@@ -226,7 +231,6 @@ function renderPostList(containerId, posts, type) {
       </div>
     </div>`}).join('');
 }
-
 function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 
 function openEdit(postId) {
