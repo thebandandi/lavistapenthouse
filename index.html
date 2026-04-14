@@ -908,25 +908,27 @@ async function fetchLiveAvailability() {
     if (!res.ok) throw new Error('Failed to fetch');
     const data = await res.json();
     
-    // 1. Always build the calendar, even if Airbnb has 0 blocked dates!
-    const liveRanges = data.ranges || [];
+    // Convert the new 'blockedDates' format into the [start, end] format the calendar needs
+    const liveRanges = (data.blockedDates || []).map(item => [item.start, item.end]);
+    
+    // Combine with the (now empty) BOOKED_RANGES list
     const allRanges = [...BOOKED_RANGES, ...liveRanges];
+    
+    // Update the internal date set and re-draw the UI
     buildBookedSet(allRanges);
     renderCalendar();
-    console.log(`Calendar synced: ${liveRanges.length} blocked ranges from Airbnb`);
 
-    // 2. THIS IS THE MISSING BATON: Update the text on the screen!
     const syncStatusText = document.getElementById('cal-sync-status');
     if (syncStatusText) {
-        syncStatusText.innerHTML = '✅ Synced with Airbnb';
-        syncStatusText.style.color = '#28a745'; 
+        syncStatusText.innerHTML = '✅ Synced with Airbnb & VRBO';
+        syncStatusText.style.color = '#2d7d46'; 
     }
 
   } catch (err) {
     console.warn('Live availability fetch failed:', err.message);
     const syncStatusText = document.getElementById('cal-sync-status');
     if (syncStatusText) {
-        syncStatusText.innerHTML = '⚠️ Sync Offline - Using Static Dates';
+        syncStatusText.innerHTML = '⚠️ Sync Offline - Check Connection';
         syncStatusText.style.color = 'red';
     }
   }
