@@ -128,15 +128,35 @@
     MIN_NIGHTS:             2,
   };
 
-  // Manually blocked dates (YYYY-MM-DD). 
-  // OR replace with Google Sheets fetch below.
-  const BOOKED_RANGES = [
-    ["2026-03-20","2026-03-24"],
-    ["2026-04-01","2026-04-05"],
-    ["2026-04-15","2026-04-20"],
-    ["2026-05-10","2026-05-14"],
-    ["2026-05-25","2026-05-31"],
-  ];
+// 1. CLEAR THE MANUAL BLOCKS
+  // We are leaving this empty so your site only shows REAL bookings from Airbnb/VRBO.
+  const BOOKED_RANGES = []; 
+
+  // 2. THE LIVE SYNC
+  // This part tells the site to go get the REAL data from your new "Hub"
+  async function loadCalendar() {
+    try {
+      const res = await fetch('/.netlify/functions/fetch-calendar');
+      const data = await res.json();
+      
+      // If we have live data, use it!
+      if (data.blockedDates) {
+        const liveRanges = data.blockedDates.map(item => [item.start, item.end]);
+        
+        // Combine the (empty) manual list with the (full) live list
+        const finalRanges = [...BOOKED_RANGES, ...liveRanges];
+
+        // Update your calendar (e.g., Flatpickr)
+        if (window.calendarInstance) {
+            window.calendarInstance.set('disable', finalRanges);
+        }
+      }
+    } catch (err) {
+      console.error("Calendar Sync Error:", err);
+    }
+  }
+
+  loadCalendar();
 </script>
 
 <!-- Stripe.js -->
