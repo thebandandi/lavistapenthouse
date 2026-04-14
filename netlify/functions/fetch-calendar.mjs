@@ -28,11 +28,14 @@ export default async (req) => {
         for (let k in data) {
           if (data[k].type === 'VEVENT') {
             const ev = data[k];
-            allBlockedDates.push({
-              start: ev.start.toISOString().split('T')[0],
-              end: ev.end.toISOString().split('T')[0],
-              source: platform
-            });
+          const startDate = new Date(ev.start).toISOString().split('T')[0];
+const endDate = new Date(ev.end).toISOString().split('T')[0];
+
+allBlockedDates.push({
+  start: startDate,
+  end: endDate,
+  source: platform
+});
           }
         }
       } catch (e) { console.error(`Failed ${platform}:`, e.message); }
