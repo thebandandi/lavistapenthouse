@@ -22,17 +22,23 @@ export default async (req, context) => {
         return new Response(JSON.stringify({ message: "Deleted" }), { status: 200 });
       }
 
-      if (action === "publish" || action === "edit") {
+     if (action === "publish" || action === "edit") {
         const post = await store.get(postId, { type: "json" });
         if (!post) return new Response("Post not found", { status: 404 });
 
         if (action === "publish") {
           post.status = "published";
+          // This ensures the public date is the moment you click Publish
+          post.publishedAt = new Date().toISOString(); 
         } else if (action === "edit") {
           post.title = updatedTitle;
           post.content = updatedContent;
           post.status = "draft"; // Keep as draft after edit
         }
+
+        await store.set(postId, JSON.stringify(post));
+        return new Response(JSON.stringify({ message: "Success", post }), { status: 200 });
+      }
 
         await store.set(postId, JSON.stringify(post));
         return new Response(JSON.stringify({ message: "Success", post }), { status: 200 });
