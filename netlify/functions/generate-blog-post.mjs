@@ -13,9 +13,9 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // BACK TO STABLE 2026: gemini-2.0-flash
-    // This model is currently the only one consistently supporting the Search tool globally.
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`;
+    // 2026 STABLE PRODUCTION MODEL: gemini-2.5-flash
+    // This model is officially supported and is NOT a preview.
+    const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -23,10 +23,10 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Search for current luxury events in San Jose del Cabo or Cabo San Lucas for late April 2026. Write a bilingual blog post for La Vista Penthouse. Focus on the local Art Walk or beach events. Structure: English Title, English Body, ## En Español, Spanish Body. End with: IMG_KEYWORDS: [3 keywords]"
+            text: "Search for luxury events in San Jose del Cabo for late April 2026. Write a bilingual blog post for La Vista Penthouse. Structure: English Title, English Body, ## En Español, Spanish Body. End with: IMG_KEYWORDS: [3 keywords]"
           }]
         }],
-        // Using the updated tool name confirmed in your previous error
+        // Using the standard stable 'google_search' tool
         tools: [{ "google_search": {} }] 
       })
     });
@@ -34,11 +34,7 @@ export default async (req, context) => {
     const data = await aiResponse.json();
 
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Google API Issue", details: data.error }), { status: 500 });
-    }
-
-    if (!data.candidates || data.candidates.length === 0) {
-      return new Response(JSON.stringify({ error: "No content generated", debug: data }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Google API Error", details: data.error }), { status: 500 });
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
@@ -56,9 +52,9 @@ export default async (req, context) => {
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success! Search grounding active." }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success! Stable 2.5 Active." }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Server Error", message: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Runtime Error", message: err.message }), { status: 500 });
   }
 };
