@@ -1,12 +1,10 @@
 import { getStore } from "@netlify/blobs";
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async (req, context) => {
   const store = getStore("blog-posts");
   const url = new URL(req.url);
   const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
+  const openAiKey = process.env.OPENAI_API_KEY;
 
   // 1. Security Check
   const password = url.searchParams.get("password");
@@ -15,27 +13,33 @@ export default async (req, context) => {
   }
 
   try {
-    // 2. Faster AI Request (Lower tokens = less chance of timeout)
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Faster and cheaper
-      messages: [
-        {
-          role: "system",
-          content: `You are a luxury concierge for La Vista Penthouse. 
-          Write a short bilingual blog post. 
-          Section 1: English (120 words). 
-          Section 2: "## En Español" followed by Spanish translation.
-          Rules: No other hotels. Focus on Cabo local life and La Vista's rooftop luxury.`
-        },
-        { role: "user", content: "Write a post about the best local seasonal activities in Cabo for April." }
-      ],
-      max_tokens: 800
+    // 2. Direct API Call (Bypasses library issues)
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openAiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a luxury concierge for La Vista Penthouse. Write a short bilingual blog post. Section 1: English (120 words). Section 2: '## En Español' followed by Spanish translation. Rules: No other hotels. Focus on Cabo local life and La Vista's rooftop luxury."
+          },
+          { role: "user", content: "Write a post about the San Jose del Cabo Art Walk and seasonal April activities." }
+        ],
+        max_tokens: 800
+      })
     });
 
-    const content = completion.choices[0].message.content;
-    const title = content.split('\n')[0].replace('##', '').trim(); // Grabs the first line as title
+    const aiData = await aiResponse.json();
+    if (!aiData.choices) throw new Error("AI failed: " + JSON.stringify(aiData));
 
-    // 3. Simple Image fallback (Prevents Unsplash crashes)
+    const content = aiData.choices[0].message.content;
+    const title = content.split('\n')[0].replace(/#/g, '').trim();
+
+    // 3. Reliable Image
     const displayImage = "https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=1200&q=80";
 
     // 4. Save to Store
@@ -51,13 +55,12 @@ export default async (req, context) => {
 
     await store.set(postId, JSON.stringify(newPost));
 
-    return new Response(JSON.stringify({ message: "Draft Created!", post: newPost }), {
+    return new Response(JSON.stringify({ message: "Success!", post: newPost }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
 
   } catch (err) {
-    console.error("Error:", err);
     return new Response("Error: " + err.message, { status: 500 });
   }
 };
