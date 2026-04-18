@@ -3,90 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Vista Admin | Blog Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>La Vista Admin | Luxury Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --primary: #1a1a1a;
-            --gold: #c5a059;
-            --bg: #f8f9fa;
-            --white: #ffffff;
-            --muted: #666666;
-            --border: #e0e0e0;
+            --sand: #d6c9b1;
+            --warm-white: #faf9f6;
+            --deep-ocean: #1a2e35;
+            --gold-accent: #c5a059;
+            --text: #2c2c2c;
+            --border: #e8e4dc;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--primary);
+            background-color: var(--warm-white);
+            color: var(--text);
             margin: 0;
             padding: 40px 20px;
         }
 
-        .container {
-            max-width: 1000px;
+        .admin-container {
+            max-width: 1100px;
             margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(26, 46, 53, 0.05);
+            border: 1px solid var(--border);
         }
 
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--sand);
+            padding-bottom: 30px;
             margin-bottom: 40px;
-            border-bottom: 2px solid var(--gold);
-            padding-bottom: 20px;
         }
 
-        h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; margin: 0; }
+        h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--deep-ocean); margin: 0; }
 
-        .btn {
-            background: var(--primary);
+        .generate-btn {
+            background: var(--deep-ocean);
             color: white;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             border-radius: 4px;
-            cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
+            cursor: pointer;
+            transition: 0.3s;
+            letter-spacing: 0.5px;
         }
 
-        .btn-publish { background: var(--gold); }
-        .btn-delete { background: #dc3545; }
-        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        .generate-btn:hover { background: var(--gold-accent); }
 
-        /* Blog Post List */
+        /* Post Card Styling */
         .post-card {
-            background: var(--white);
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
             border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
+            border: 1px solid var(--border);
             align-items: center;
+            transition: transform 0.2s;
         }
 
-        .post-info h3 { margin: 0 0 8px 0; font-family: 'Playfair Display', serif; }
-        .post-meta { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
+        .post-card:hover { transform: translateX(5px); border-color: var(--sand); }
+
+        .thumbnail-preview {
+            width: 120px;
+            height: 80px;
+            background-color: var(--sand);
             border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: 10px;
+            object-fit: cover;
         }
-        .status-draft { background: #fff3cd; color: #856404; }
-        .status-published { background: #d4edda; color: #155724; }
 
-        /* Modal / Editor */
+        .post-details h3 { 
+            margin: 0 0 5px 0; 
+            font-family: 'Playfair Display', serif; 
+            color: var(--deep-ocean); 
+        }
+
+        .post-meta { font-size: 12px; color: var(--gold-accent); font-weight: 600; }
+
+        .status-tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 3px;
+            margin-left: 8px;
+        }
+        .status-draft { background: #eee; color: #666; }
+        .status-published { background: #e3f2fd; color: #1565c0; }
+
+        /* Modal / Editor Restored */
         #edit-modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(26, 46, 53, 0.8);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -94,64 +116,56 @@
 
         #edit-modal.open { display: flex; }
 
-        .modal-content {
-            background: var(--white);
-            width: 90%;
-            max-width: 800px;
-            max-height: 90vh;
-            padding: 32px;
-            border-radius: 12px;
+        .modal-body {
+            background: white;
+            width: 95%;
+            max-width: 900px;
+            max-height: 85vh;
+            padding: 40px;
+            border-radius: 8px;
             overflow-y: auto;
         }
 
-        .edit-title-input, .edit-image-input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 18px;
-            font-family: 'Playfair Display', serif;
-        }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--gold-accent); }
+        .input-field { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; }
 
-        .edit-image-input { font-size: 14px; font-family: 'Inter', sans-serif; color: var(--muted); }
+        #editor-container { height: 350px; margin-bottom: 30px; }
 
-        #editor-container { height: 400px; margin-bottom: 24px; }
-        
-        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+        .action-footer { display: flex; justify-content: flex-end; gap: 15px; }
+        .secondary-btn { background: none; border: 1px solid var(--sand); color: var(--deep-ocean); padding: 12px 24px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="admin-container">
     <header>
-        <h1>Blog Dashboard</h1>
-        <button class="btn" onclick="window.open('/.netlify/functions/generate-blog-post?password=' + prompt('Enter Admin Password:'), '_blank')">
-            + Generate New Draft
-        </button>
+        <h1>La Vista Admin</h1>
+        <button class="generate-btn" onclick="triggerGeneration()">+ NEW POST DRAFT</button>
     </header>
 
     <div id="posts-list">
-        <p style="text-align: center; color: var(--muted);">Loading your Cabo stories...</p>
-    </div>
+        </div>
 </div>
 
 <div id="edit-modal">
-    <div class="modal-content">
-        <h2 style="font-family: 'Playfair Display', serif; margin-top: 0;">Edit Cabo Update</h2>
+    <div class="modal-body">
+        <div class="input-group">
+            <label>POST TITLE</label>
+            <input type="text" id="edit-title" class="input-field" style="font-family:'Playfair Display'; font-size: 20px;">
+        </div>
         
-        <label style="font-size: 11px; font-weight: bold; color: var(--muted);">POST TITLE</label>
-        <input type="text" id="edit-title" class="edit-title-input">
-
-        <label style="font-size: 11px; font-weight: bold; color: var(--muted);">FEATURED IMAGE URL (UNSPLASH OR CUSTOM)</label>
-        <input type="text" id="edit-image" class="edit-image-input" placeholder="https://images.unsplash.com/...">
+        <div class="input-group">
+            <label>FEATURED IMAGE URL</label>
+            <input type="text" id="edit-image" class="input-field" placeholder="https://unsplash.com/...">
+        </div>
 
         <div id="editor-container"></div>
 
-        <div class="modal-actions">
-            <button class="btn" style="background: #6c757d;" onclick="closeEdit()">Cancel</button>
-            <button class="btn btn-publish" onclick="saveEdit()">Save Draft</button>
-            <button class="btn" style="background: #28a745;" onclick="publishPost()">Publish Live</button>
+        <div class="action-footer">
+            <button class="secondary-btn" onclick="closeEdit()">Discard</button>
+            <button class="generate-btn" style="background: var(--gold-accent);" onclick="saveEdit('draft')">Save Draft</button>
+            <button class="generate-btn" onclick="saveEdit('published')">Publish Live</button>
         </div>
     </div>
 </div>
@@ -163,36 +177,30 @@
     let currentEditingId = null;
 
     async function fetchPosts() {
-        try {
-            const res = await fetch('/.netlify/functions/blog-posts');
-            allPosts = await res.json();
-            renderPosts();
-        } catch (e) { console.error("Fetch failed", e); }
+        const res = await fetch('/.netlify/functions/blog-posts');
+        allPosts = await res.json();
+        renderPosts();
     }
 
     function renderPosts() {
         const list = document.getElementById('posts-list');
-        if (allPosts.length === 0) {
-            list.innerHTML = `<p style="text-align:center; padding: 40px;">No posts found. Generate your first one!</p>`;
-            return;
-        }
-        list.innerHTML = allPosts.sort((a,b) => new Date(b.date) - new Date(a.date)).map(post => `
+        list.innerHTML = allPosts.sort((a,b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map(post => {
+            const dateStr = post.date ? new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending...';
+            return `
             <div class="post-card">
-                <div class="post-info">
+                <img src="${post.displayImage || ''}" class="thumbnail-preview" onerror="this.src='https://via.placeholder.com/120x80?text=Cabo'">
+                <div class="post-details">
                     <div class="post-meta">
-                        ${new Date(post.date).toLocaleDateString()} 
-                        <span class="status-badge ${post.status === 'published' ? 'status-published' : 'status-draft'}">
-                            ${post.status.toUpperCase()}
-                        </span>
+                        ${dateStr} 
+                        <span class="status-tag ${post.status === 'published' ? 'status-published' : 'status-draft'}">${post.status}</span>
                     </div>
                     <h3>${post.title}</h3>
                 </div>
-                <div class="post-actions">
-                    <button class="btn" onclick="openEditor('${post.id}')">Edit</button>
-                    <button class="btn btn-delete" onclick="deletePost('${post.id}')">Delete</button>
+                <div>
+                    <button class="secondary-btn" onclick="openEditor('${post.id}')">Edit</button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
 
     function openEditor(postId) {
@@ -201,59 +209,35 @@
         document.getElementById('edit-title').value = post.title;
         document.getElementById('edit-image').value = post.displayImage || "";
         
-        // Convert markdown or raw text to HTML for Quill
-        quill.root.innerHTML = marked.parse(post.content);
+        // Handle markdown or HTML content
+        quill.root.innerHTML = post.content.includes('<p>') ? post.content : marked.parse(post.content);
         document.getElementById('edit-modal').classList.add('open');
     }
 
-    function closeEdit() {
-        document.getElementById('edit-modal').classList.remove('open');
-        currentEditingId = null;
-    }
+    function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); }
 
-    async function saveEdit() {
-        const updatedTitle = document.getElementById('edit-title').value;
-        const updatedImage = document.getElementById('edit-image').value;
-        const updatedContent = quill.root.innerHTML;
+    async function saveEdit(status) {
+        const data = {
+            title: document.getElementById('edit-title').value,
+            displayImage: document.getElementById('edit-image').value,
+            content: quill.root.innerHTML,
+            status: status,
+            date: new Date().toISOString()
+        };
 
-        await apiAction('edit', currentEditingId, { 
-            title: updatedTitle, 
-            content: updatedContent,
-            displayImage: updatedImage,
-            status: 'draft' 
-        });
-        closeEdit();
-        fetchPosts();
-    }
-
-    async function publishPost() {
-        const updatedTitle = document.getElementById('edit-title').value;
-        const updatedImage = document.getElementById('edit-image').value;
-        const updatedContent = quill.root.innerHTML;
-
-        await apiAction('edit', currentEditingId, { 
-            title: updatedTitle, 
-            content: updatedContent,
-            displayImage: updatedImage,
-            status: 'published',
-            publishedAt: new Date().toISOString()
-        });
-        closeEdit();
-        fetchPosts();
-    }
-
-    async function deletePost(postId) {
-        if (!confirm("Are you sure? This cannot be undone.")) return;
-        await apiAction('delete', postId);
-        fetchPosts();
-    }
-
-    async function apiAction(type, id, data = {}) {
-        const password = prompt("Confirm Admin Password:");
-        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${id}&action=${type}`, {
+        const password = prompt("Admin Password:");
+        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${currentEditingId}&action=edit`, {
             method: 'POST',
             body: JSON.stringify(data)
         });
+        
+        closeEdit();
+        fetchPosts();
+    }
+
+    function triggerGeneration() {
+        const password = prompt("Admin Password:");
+        window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
     }
 
     fetchPosts();
