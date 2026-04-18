@@ -11,6 +11,9 @@ export default async (req, context) => {
   }
 
   try {
+    if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
+
+    // Using the current stable v1beta for better web-search/grounding capabilities
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
@@ -19,50 +22,56 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `You are a luxury concierge for La Vista Penthouse in Cabo. 
-            
-            TASK: 
-            1. Search/Reference local events from https://www.visitloscabos.travel/events/ for the current month.
-            2. Write a bilingual blog post (English/Spanish).
-            3. Include a specific upcoming event if it is relevant to a luxury guest.
-            
-            STRUCTURE:
-            Line 1: Catchy English Title
-            Line 2: English Content (150 words). Include local events, Art Walk, and rooftop luxury. No other hotels.
-            Line 3: ## En Español
-            Line 4: Spanish Translation.
-            
-            KEYWORDS FOR IMAGE: At the very end, add a line starting with 'IMG_KEYWORDS:' followed by 3 descriptive keywords (e.g., IMG_KEYWORDS: Cabo, Sunset, Yacht).`
+            text: `You are a luxury concierge for La Vista Penthouse. 
+            TASK: Check https://www.visitloscabos.travel/events/ for upcoming April/May 2026 events.
+            Write a bilingual blog post (English first, then '## En Español', then Spanish).
+            Include 1 specific event from the site.
+            No other hotels. 
+            IMPORTANT: End the post with a line exactly like this: IMG_KEYWORDS: [3 keywords]`
           }]
         }]
       })
     });
 
     const data = await aiResponse.json();
+
+    // --- SAFETY CATCH: Prevents the "undefined (reading '0')" error ---
+    if (!data || !data.candidates || data.candidates.length === 0) {
+      console.error("Gemini Response Error:", data);
+      return new Response(JSON.stringify({
+        error: "AI failed to generate content.",
+        debug: data // This tells you exactly what Google said
+      }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+
     const fullText = data.candidates[0].content.parts[0].text;
-    
-    // Logic to separate the text from the keywords
     const contentParts = fullText.split('IMG_KEYWORDS:');
     const blogBody = contentParts[0].trim();
-    const keywords = contentParts[1] ? contentParts[1].trim() : "Cabo,Luxury";
+    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury,Beach";
     
     const title = blogBody.split('\n')[0].replace(/#/g, '').trim();
-
-    // Use a dynamic Unsplash URL that picks a photo based on AI keywords
     const displayImage = `https://source.unsplash.com/800x600/?${encodeURIComponent(keywords)}`;
 
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
-      title: title,
+      title: title || "New Cabo Update",
       content: blogBody,
-      displayImage: displayImage, // This is the "Featured Image"
+      displayImage: displayImage,
       status: "draft",
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success!" }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success! Check your dashboard." }), { 
+      status: 200, 
+      headers: { "Content-Type": "application/json" } 
+    });
+
   } catch (err) {
-    return new Response("Error: " + err.message, { status: 500 });
+    return new Response(JSON.stringify({ error: "Server Crash", message: err.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" } 
+    });
   }
 };
