@@ -13,9 +13,8 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // APRIL 2026 GROUNDING ENDPOINT
-    // We use gemini-3.1-flash-lite-preview for the best web-searching capability
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey.trim()}`;
+    // API Update April 2026: Use gemini-3.1-flash-preview for Grounding
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-preview:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -23,11 +22,11 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Search for current luxury events in San Jose del Cabo or Cabo San Lucas for late April 2026. Write a bilingual blog post for La Vista Penthouse. Focus on the Art Walk or rooftop relaxation. Structure: English Title, English Body, ## En Español, Spanish Body. End with: IMG_KEYWORDS: [3 keywords]"
+            text: "Search for current luxury events in San Jose del Cabo or Cabo San Lucas for late April 2026. Write a bilingual blog post for La Vista Penthouse. Structure: English Title, English Body, ## En Español, Spanish Body. End with: IMG_KEYWORDS: [3 keywords]"
           }]
         }],
-        // This is the CRITICAL part for current data:
-        tools: [{ "googleSearchRetrieval": {} }] 
+        // FIXED SYNTAX: Changed google_search_retrieval to google_search
+        tools: [{ "google_search": {} }] 
       })
     });
 
@@ -35,6 +34,10 @@ export default async (req, context) => {
 
     if (data.error) {
       return new Response(JSON.stringify({ error: "Google API Issue", details: data.error }), { status: 500 });
+    }
+
+    if (!data.candidates || data.candidates.length === 0) {
+      return new Response(JSON.stringify({ error: "No content generated", debug: data }), { status: 500 });
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
