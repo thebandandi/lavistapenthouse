@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local News | La Vista Penthouse Cabo</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
- </style>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-</head>
-<body>
+    
+    <style>
         :root { --deep-ocean: #1a3a4a; --terracotta: #c4714a; --warm-white: #faf8f4; --border: #e0d8cc; --gold: #c9a84c; }
         body { font-family: 'DM Sans', sans-serif; background: var(--warm-white); color: #1c1c1c; margin: 0; }
         nav { padding: 20px 48px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff; }
@@ -25,67 +23,66 @@
         .post-content { line-height: 1.8; color: #444; font-size: 16px; }
         .post-content p { margin-bottom: 20px; }
         
+        /* New Bilingual Header Style */
+        .post-content h2 { 
+            font-family: 'Cormorant Garamond', serif; 
+            font-size: 24px; 
+            color: var(--terracotta); 
+            border-top: 1px solid var(--border); 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+
         @media (max-width: 600px) {
             .post-image { height: 250px; }
             .post-body { padding: 24px; }
             h1 { font-size: 36px; }
         }
-    /* This makes the 'En Español' header look like a professional divider */
-.post-content h2 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 24px;
-    color: var(--terracotta);
-    border-top: 1px solid var(--border);
-    margin-top: 40px;
-    padding-top: 20px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+    </style>
 
-/* Optional: Make the Spanish text slightly distinct */
-.spanish-text {
-    color: #555;
-    line-height: 1.8;
-}
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <nav><a href="/" class="nav-logo">La Vista <span>Penthouse</span></a></nav>
+    <div class="container">
+        <h1>Local News & Updates</h1>
+        <div id="blog-container">Loading latest updates from Cabo...</div>
+    </div>
 
     <script>
-    async function loadPosts() {
-        try {
-            // Updated to the full Netlify path for consistency
-            const res = await fetch('/.netlify/functions/blog-posts');
-            const posts = await res.json();
-            const container = document.getElementById('blog-container');
-            
-            if (posts && posts.length > 0) {
-                container.innerHTML = posts.map(p => {
-                    // 1. SMART IMAGE SELECTION
-                    // This looks in 'displayImage' first, then 'image.url', then 'image.thumb'
-                    const imgUrl = p.displayImage || 
-                                 (p.image && p.image.url) || 
-                                 (p.image && p.image.thumb) || 
-                                 "/images/default-blog.jpg";
-
-                    // 2. SMART DATE SELECTION
-                    const postDate = p.publishedAt || p.createdAt || p.date;
-                    
-                    return `
-                        <article class="post-card">
-                            <img src="${imgUrl}" alt="${p.title}" class="post-image" onerror="this.src='/images/default-blog.jpg'">
-                            <div class="post-body">
-                                <div class="post-date">${new Date(postDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                                <h2 class="post-title">${p.title}</h2>
-                                <div class="post-content">${marked.parse(p.content)}</div>
-                            </div>
-                        </article>
-                    `;
-                }).join('');
-            } else {
-                container.innerHTML = "<div class='post-card' style='padding:40px; text-align:center;'><p>New updates coming soon!</p></div>";
+        async function loadPosts() {
+            try {
+                const res = await fetch('/.netlify/functions/blog-posts');
+                const posts = await res.json();
+                const container = document.getElementById('blog-container');
+                
+                if (posts && posts.length > 0) {
+                    container.innerHTML = posts.map(p => {
+                        const imgUrl = p.displayImage || (p.image && p.image.url) || "/images/default-blog.jpg";
+                        const postDate = p.publishedAt || p.createdAt || p.date;
+                        
+                        return `
+                            <article class="post-card">
+                                <img src="${imgUrl}" alt="${p.title}" class="post-image" onerror="this.src='/images/default-blog.jpg'">
+                                <div class="post-body">
+                                    <div class="post-date">${new Date(postDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                                    <h2 class="post-title">${p.title}</h2>
+                                    <div class="post-content">${marked.parse(p.content)}</div>
+                                </div>
+                            </article>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = "<div class='post-card' style='padding:40px; text-align:center;'><p>New updates coming soon!</p></div>";
+                }
+            } catch (e) {
+                console.error("Error loading blog:", e);
+                document.getElementById('blog-container').innerHTML = "<p>Welcome to our local news section. Check back soon for Cabo updates!</p>";
             }
-        } catch (e) {
-            console.error("Error loading blog:", e);
-            document.getElementById('blog-container').innerHTML = "<p>Welcome to our local news section. Check back soon for Cabo updates!</p>";
         }
-    }
-    loadPosts();
-</script>
+        loadPosts();
+    </script>
+</body>
+</html>
