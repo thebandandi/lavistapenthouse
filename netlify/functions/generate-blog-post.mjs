@@ -6,20 +6,12 @@ export default async (req, context) => {
   const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  // 1. Security Check
-  const password = url.searchParams.get("password");
-  if (password !== passwordHeader) {
+  if (url.searchParams.get("password") !== passwordHeader) {
     return new Response("Unauthorized", { status: 401 });
   }
 
   try {
-    if (!geminiKey) {
-      return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
-    }
-
-    // 2. Updated April 2026 Stable Endpoint
-    // We use gemini-2.5-flash which is the current 2026 workhorse
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -27,40 +19,50 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Write a high-end bilingual blog post for La Vista Penthouse. Structure: Catchy Title (first line), English section (150 words), then '## En Español' header, then Spanish translation. No other hotels. Focus on the Art Walk and Cabo lifestyle."
+            text: `You are a luxury concierge for La Vista Penthouse in Cabo. 
+            
+            TASK: 
+            1. Search/Reference local events from https://www.visitloscabos.travel/events/ for the current month.
+            2. Write a bilingual blog post (English/Spanish).
+            3. Include a specific upcoming event if it is relevant to a luxury guest.
+            
+            STRUCTURE:
+            Line 1: Catchy English Title
+            Line 2: English Content (150 words). Include local events, Art Walk, and rooftop luxury. No other hotels.
+            Line 3: ## En Español
+            Line 4: Spanish Translation.
+            
+            KEYWORDS FOR IMAGE: At the very end, add a line starting with 'IMG_KEYWORDS:' followed by 3 descriptive keywords (e.g., IMG_KEYWORDS: Cabo, Sunset, Yacht).`
           }]
         }]
       })
     });
 
     const data = await aiResponse.json();
-
-    if (!data.candidates || data.candidates.length === 0) {
-      return new Response("Gemini API Error: " + JSON.stringify(data), { status: 500 });
-    }
-
     const fullText = data.candidates[0].content.parts[0].text;
-    const lines = fullText.split('\n').filter(l => l.trim() !== "");
-    const title = lines[0].replace(/#/g, '').trim();
+    
+    // Logic to separate the text from the keywords
+    const contentParts = fullText.split('IMG_KEYWORDS:');
+    const blogBody = contentParts[0].trim();
+    const keywords = contentParts[1] ? contentParts[1].trim() : "Cabo,Luxury";
+    
+    const title = blogBody.split('\n')[0].replace(/#/g, '').trim();
 
-    // 3. Save Draft to Vault
+    // Use a dynamic Unsplash URL that picks a photo based on AI keywords
+    const displayImage = `https://source.unsplash.com/800x600/?${encodeURIComponent(keywords)}`;
+
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
       title: title,
-      content: fullText,
+      content: blogBody,
+      displayImage: displayImage, // This is the "Featured Image"
       status: "draft",
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      displayImage: "https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=1200&q=80"
+      date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success! Bilingual draft created." }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
+    return new Response(JSON.stringify({ message: "Success!" }), { status: 200 });
   } catch (err) {
-    return new Response("Runtime Error: " + err.message, { status: 500 });
+    return new Response("Error: " + err.message, { status: 500 });
   }
 };
