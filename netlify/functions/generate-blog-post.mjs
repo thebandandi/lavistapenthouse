@@ -194,15 +194,14 @@ export default async () => {
   You MUST write a bilingual blog post in TWO DISTINCT SECTIONS.
 
   SECTION 1: English
-  - Write approximately 150 words of high-end travel advice for Cabo.
+  - Write a high-end travel tip for Cabo (approx 150 words).
   - STRICT: No competitor hotels/lodging.
 
-  SECTION 2: Spanish
+  SECTION 2: En Español
   - Start with the header "## En Español".
   - Provide a professional translation of the English text.
 
-  STRICT RULE: If you do not include both English and Spanish sections, the post is considered a failure. 
-  Always tie the content back to the private rooftop and luxury of La Vista Penthouse.
+  STRICT RULE: Both sections are mandatory. Tie it back to the La Vista Penthouse rooftop view.
 `;
 
     console.log("Calling Claude API...");
