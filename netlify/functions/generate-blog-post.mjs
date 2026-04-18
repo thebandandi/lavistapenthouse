@@ -4,7 +4,7 @@ export default async (req, context) => {
   const store = getStore("blog-posts");
   const url = new URL(req.url);
   const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
-  const openAiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY; // Ensure this name matches your Netlify setting
 
   // 1. Security Check
   const password = url.searchParams.get("password");
@@ -13,36 +13,38 @@ export default async (req, context) => {
   }
 
   try {
-    // 2. Direct API Call (Bypasses library issues)
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    if (!anthropicKey) {
+      return new Response("Error: ANTHROPIC_API_KEY is missing in Netlify settings.", { status: 500 });
+    }
+
+    // 2. Anthropic API Call
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${openAiKey}`,
+        "x-api-key": anthropicKey.trim(),
+        "anthropic-version": "2023-06-01", // Required by Anthropic
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "claude-3-haiku-20240307", // Fast and efficient for blog drafts
+        max_tokens: 1024,
+        system: "You are a luxury concierge for La Vista Penthouse. Write a short bilingual blog post. Section 1: English (120 words). Section 2: '## En Español' followed by Spanish translation. Rules: No other hotels. Focus on Cabo local life and La Vista's rooftop luxury.",
         messages: [
-          {
-            role: "system",
-            content: "You are a luxury concierge for La Vista Penthouse. Write a short bilingual blog post. Section 1: English (120 words). Section 2: '## En Español' followed by Spanish translation. Rules: No other hotels. Focus on Cabo local life and La Vista's rooftop luxury."
-          },
-          { role: "user", content: "Write a post about the San Jose del Cabo Art Walk and seasonal April activities." }
-        ],
-        max_tokens: 800
+          { role: "user", content: "Write a post about April activities in Cabo, specifically the Art Walk." }
+        ]
       })
     });
 
     const aiData = await aiResponse.json();
-    if (!aiData.choices) throw new Error("AI failed: " + JSON.stringify(aiData));
+    
+    if (aiData.error) {
+      throw new Error(`Anthropic Error: ${aiData.error.message}`);
+    }
 
-    const content = aiData.choices[0].message.content;
+    const content = aiData.content[0].text;
     const title = content.split('\n')[0].replace(/#/g, '').trim();
 
-    // 3. Reliable Image
-    const displayImage = "https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=1200&q=80";
-
-    // 4. Save to Store
+    // 3. Save to Store
     const postId = `post-${Date.now()}`;
     const newPost = {
       title: title || "New Cabo Update",
@@ -50,7 +52,7 @@ export default async (req, context) => {
       status: "draft",
       date: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      displayImage: displayImage
+      displayImage: "https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=1200&q=80"
     };
 
     await store.set(postId, JSON.stringify(newPost));
