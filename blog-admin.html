@@ -46,7 +46,6 @@
 
         h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--deep-ocean); margin: 0; }
 
-        /* Navigation Tabs */
         .tabs { display: flex; gap: 30px; margin-bottom: 30px; border-bottom: 1px solid #eee; }
         .tab { 
             padding: 10px 0; 
@@ -77,7 +76,6 @@
 
         .btn:hover { background: var(--gold); transform: translateY(-1px); }
 
-        /* Luxury Post Cards */
         .post-card {
             display: grid;
             grid-template-columns: 150px 1fr auto;
@@ -91,7 +89,7 @@
             transition: all 0.3s ease;
         }
 
-        .post-card:hover { border-color: var(--sand); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .post-card:hover { border-color: var(--sand); transform: translateY(-2px); }
 
         .thumb-box {
             width: 150px;
@@ -106,7 +104,6 @@
         .post-details h3 { font-family: 'Playfair Display', serif; margin: 0 0 10px 0; color: var(--deep-ocean); font-size: 1.6rem; }
         .post-meta { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
 
-        /* Modal Structure */
         #edit-modal {
             display: none;
             position: fixed;
@@ -132,7 +129,6 @@
         .input-field { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 4px; font-size: 16px; box-sizing: border-box; }
 
         #editor-container { height: 400px; margin-bottom: 30px; background: white; }
-        
         .modal-footer { display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid #eee; padding-top: 25px; }
     </style>
 </head>
@@ -141,7 +137,7 @@
 <div class="admin-container">
     <header>
         <h1>La Vista Admin</h1>
-        <button class="btn" onclick="generateNew()">+ New Penthouse Update</button>
+        <button class="btn" onclick="generateNew()">+ New Update</button>
     </header>
 
     <div class="tabs">
@@ -150,7 +146,8 @@
     </div>
 
     <div id="posts-list">
-        </div>
+        <p style="text-align: center; color: var(--gold);">Refreshing the gallery...</p>
+    </div>
 </div>
 
 <div id="edit-modal">
@@ -205,18 +202,26 @@
             return;
         }
 
-        listEl.innerHTML = filtered.sort((a,b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0)).map(p => `
-            <div class="post-card">
-                <div class="thumb-box">
-                    <img src="${p.displayImage || ''}" onerror="this.src='https://via.placeholder.com/150x100?text=Cabo'">
+        listEl.innerHTML = filtered.sort((a,b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0)).map(p => {
+            // HYBRID IMAGE LOGIC: Handles old Claude and new Gemini structures
+            const thumbUrl = p.displayImage || 
+                             (p.image && p.image.url) || 
+                             (p.image && p.image.thumb) || 
+                             '/images/default-blog.jpg';
+
+            return `
+                <div class="post-card">
+                    <div class="thumb-box">
+                        <img src="${thumbUrl}" onerror="this.src='https://via.placeholder.com/150x100?text=Cabo'">
+                    </div>
+                    <div class="post-details">
+                        <div class="post-meta">${new Date(p.date || p.createdAt).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</div>
+                        <h3>${p.title || 'Untitled Update'}</h3>
+                    </div>
+                    <button class="btn" style="background: var(--sand); color: var(--deep-ocean);" onclick="openEdit('${p.id}')">EDIT</button>
                 </div>
-                <div class="post-details">
-                    <div class="post-meta">${new Date(p.date || p.createdAt).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})}</div>
-                    <h3>${p.title || 'Untitled Update'}</h3>
-                </div>
-                <button class="btn" style="background: var(--sand); color: var(--deep-ocean);" onclick="openEdit('${p.id}')">EDIT</button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function switchTab(t) {
@@ -230,11 +235,13 @@
         activeId = id;
         const post = allPosts.find(p => p.id === id);
         document.getElementById('edit-title').value = post.title || "";
-        document.getElementById('edit-image').value = post.displayImage || "";
+        
+        // Ensure the editor gets the correct image path back too
+        const thumbUrl = post.displayImage || (post.image && post.image.url) || "";
+        document.getElementById('edit-image').value = thumbUrl;
         
         const content = post.content || "";
         quill.root.innerHTML = content.includes('<p>') ? content : (window.marked ? marked.parse(content) : content);
-        
         document.getElementById('edit-modal').style.display = 'flex';
     }
 
