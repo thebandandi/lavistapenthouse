@@ -1,142 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Vista Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-    <style>
-        :root { --sand: #d6c9b1; --warm-white: #faf9f6; --deep-ocean: #1a2e35; --gold: #c5a059; }
-        body { font-family: 'Inter', sans-serif; background: var(--warm-white); margin: 0; padding: 40px 20px; }
-        .admin-container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; border: 1px solid #e8e4dc; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--sand); padding-bottom: 20px; margin-bottom: 20px; }
-        h1 { font-family: 'Playfair Display', serif; color: var(--deep-ocean); margin: 0; }
-        .btn { background: var(--deep-ocean); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; text-transform: uppercase; font-size: 12px; }
-        .btn:hover { background: var(--gold); }
-        
-        .post-card { display: flex; gap: 20px; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; align-items: center; }
-        .post-thumb { width: 100px; height: 70px; object-fit: cover; border-radius: 4px; background: #eee; }
-        .post-info { flex: 1; }
-        .status { font-size: 10px; font-weight: 700; color: var(--gold); }
-        
-        /* Modal */
-        #edit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px; width: 90%; max-width: 800px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
-        #editor-container { height: 300px; margin-bottom: 20px; }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 10px; font-weight: 800; margin-bottom: 5px; }
-        .input-field { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    </style>
-</head>
-<body>
+<html>
+<head><title>La Vista Emergency Admin</title></head>
+<body style="background: #faf9f6; font-family: sans-serif; padding: 50px;">
+    <h1>La Vista Posts (Emergency View)</h1>
+    <button onclick="location.reload()" style="padding: 10px; margin-bottom: 20px;">Refresh Data</button>
+    
+    <div id="posts-list">Loading...</div>
 
-<div class="admin-container">
-    <header>
-        <h1>La Vista Admin</h1>
-        <button class="btn" onclick="generateNew()">+ New Draft</button>
-    </header>
+    <script>
+        async function load() {
+            const list = document.getElementById('posts-list');
+            try {
+                const res = await fetch('/.netlify/functions/blog-posts');
+                const posts = await res.json();
+                
+                if (!posts || posts.length === 0) {
+                    list.innerHTML = "No posts found in database.";
+                    return;
+                }
 
-    <div id="posts-list">
-        <p style="text-align: center;">Loading your penthouse updates...</p>
-    </div>
-</div>
-
-<div id="edit-modal">
-    <div class="modal-content">
-        <div class="input-group">
-            <label>TITLE</label>
-            <input type="text" id="edit-title" class="input-field">
-        </div>
-        <div class="input-group">
-            <label>IMAGE URL</label>
-            <input type="text" id="edit-image" class="input-field">
-        </div>
-        
-        <div id="editor-container"></div>
-
-        <div style="text-align: right;">
-            <button class="btn" style="background: #999;" onclick="closeModal()">Cancel</button>
-            <button class="btn" onclick="savePost()">Save & Publish</button>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
-    // Initialize Quill AFTER the HTML has loaded
-    const quill = new Quill('#editor-container', { theme: 'snow' });
-    let allPosts = [];
-    let currentId = null;
-
-    async function fetchAll() {
-        console.log("Fetching posts...");
-        try {
-            const res = await fetch('/.netlify/functions/blog-posts');
-            allPosts = await res.json();
-            console.log("Fetched:", allPosts);
-            render();
-        } catch (err) {
-            document.getElementById('posts-list').innerHTML = "Error loading database.";
+                list.innerHTML = posts.map(p => `
+                    <div style="background: white; border: 1px solid #ddd; padding: 20px; margin-bottom: 10px; border-radius: 8px;">
+                        <h2 style="margin-top: 0;">${p.title || 'Untitled'}</h2>
+                        <p><strong>Status:</strong> ${p.status} | <strong>ID:</strong> ${p.id}</p>
+                        <img src="${p.displayImage}" style="width: 200px; border-radius: 4px;">
+                        <hr>
+                        <div style="max-height: 100px; overflow: hidden;">${p.content}</div>
+                        <button onclick="alert('To edit, we will restore the full dashboard once you see this working.')" style="margin-top: 10px;">Edit Content</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = "Error: " + err.message;
+            }
         }
-    }
-
-    function render() {
-        const list = document.getElementById('posts-list');
-        if (!allPosts || allPosts.length === 0) {
-            list.innerHTML = "No posts found.";
-            return;
-        }
-
-        list.innerHTML = allPosts.map(p => `
-            <div class="post-card">
-                <img class="post-thumb" src="${p.displayImage || ''}" onerror="this.src='https://via.placeholder.com/100x70'">
-                <div class="post-info">
-                    <div class="status">${(p.status || 'DRAFT').toUpperCase()}</div>
-                    <h3 style="margin: 5px 0; font-family: 'Playfair Display';">${p.title || 'Untitled'}</h3>
-                </div>
-                <button class="btn" style="background: var(--sand); color: #1a2e35;" onclick="openEdit('${p.id}')">Edit</button>
-            </div>
-        `).join('');
-    }
-
-    function openEdit(id) {
-        currentId = id;
-        const post = allPosts.find(p => p.id === id);
-        document.getElementById('edit-title').value = post.title || "";
-        document.getElementById('edit-image').value = post.displayImage || "";
-        quill.root.innerHTML = post.content.includes('<p>') ? post.content : marked.parse(post.content || "");
-        document.getElementById('edit-modal').style.display = 'flex';
-    }
-
-    function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
-
-    async function savePost() {
-        const password = prompt("Admin Password:");
-        const payload = {
-            title: document.getElementById('edit-title').value,
-            displayImage: document.getElementById('edit-image').value,
-            content: quill.root.innerHTML,
-            status: 'published',
-            date: new Date().toISOString()
-        };
-        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${currentId}&action=edit`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        closeModal();
-        fetchAll();
-    }
-
-    function generateNew() {
-        const password = prompt("Admin Password:");
-        window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
-    }
-
-    // Start
-    fetchAll();
-</script>
-
+        load();
+    </script>
 </body>
 </html>
