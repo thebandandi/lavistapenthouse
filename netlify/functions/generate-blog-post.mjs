@@ -28,7 +28,7 @@ export default async (req, context) => {
     }
 
     // 3. Gemini API Configuration
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`;
+    const endpoint = https://www.google.com/search?q=https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent%3Fkey%3D${geminiKey.trim()}`;`
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
