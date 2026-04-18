@@ -1,39 +1,137 @@
 <!DOCTYPE html>
-<html>
-<head><title>La Vista Emergency Admin</title></head>
-<body style="background: #faf9f6; font-family: sans-serif; padding: 50px;">
-    <h1>La Vista Posts (Emergency View)</h1>
-    <button onclick="location.reload()" style="padding: 10px; margin-bottom: 20px;">Refresh Data</button>
-    
-    <div id="posts-list">Loading...</div>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Vista Admin | Luxury Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root { --sand: #d6c9b1; --warm-white: #faf9f6; --deep-ocean: #1a2e35; --gold: #c5a059; --border: #e8e4dc; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--warm-white); color: #2c2c2c; margin: 0; padding: 40px 20px; }
+        .admin-container { max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(26, 46, 53, 0.05); border: 1px solid var(--border); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--sand); padding-bottom: 25px; margin-bottom: 30px; }
+        h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--deep-ocean); margin: 0; }
+        .btn { background: var(--deep-ocean); color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: 600; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        .btn:hover { background: var(--gold); }
+        
+        /* Post Cards */
+        .post-card { display: flex; gap: 20px; background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
+        .post-thumb { width: 120px; height: 80px; border-radius: 4px; object-fit: cover; background: var(--sand); }
+        .post-info { flex: 1; }
+        .post-info h3 { margin: 0 0 5px 0; font-family: 'Playfair Display', serif; color: var(--deep-ocean); font-size: 1.4rem; }
+        .status-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; background: #eee; color: #666; text-transform: uppercase; }
+        .published { background: #d4edda; color: #155724; }
 
-    <script>
-        async function load() {
-            const list = document.getElementById('posts-list');
-            try {
-                const res = await fetch('/.netlify/functions/blog-posts');
-                const posts = await res.json();
-                
-                if (!posts || posts.length === 0) {
-                    list.innerHTML = "No posts found in database.";
-                    return;
-                }
+        /* Modal Restored */
+        #edit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26, 46, 53, 0.9); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 850px; padding: 35px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
+        #editor-container { height: 350px; margin-bottom: 25px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 10px; font-weight: 800; color: var(--gold); margin-bottom: 8px; }
+        .input-field { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
 
-                list.innerHTML = posts.map(p => `
-                    <div style="background: white; border: 1px solid #ddd; padding: 20px; margin-bottom: 10px; border-radius: 8px;">
-                        <h2 style="margin-top: 0;">${p.title || 'Untitled'}</h2>
-                        <p><strong>Status:</strong> ${p.status} | <strong>ID:</strong> ${p.id}</p>
-                        <img src="${p.displayImage}" style="width: 200px; border-radius: 4px;">
-                        <hr>
-                        <div style="max-height: 100px; overflow: hidden;">${p.content}</div>
-                        <button onclick="alert('To edit, we will restore the full dashboard once you see this working.')" style="margin-top: 10px;">Edit Content</button>
-                    </div>
-                `).join('');
-            } catch (err) {
-                list.innerHTML = "Error: " + err.message;
-            }
+<div class="admin-container">
+    <header>
+        <h1>La Vista Admin</h1>
+        <button class="btn" onclick="generateNew()">+ New Draft</button>
+    </header>
+
+    <div id="posts-list">
+        <p style="text-align: center; color: var(--gold);">Re-styling your penthouse updates...</p>
+    </div>
+</div>
+
+<div id="edit-modal">
+    <div class="modal-content">
+        <div class="input-group">
+            <label>POST TITLE</label>
+            <input type="text" id="edit-title" class="input-field">
+        </div>
+        <div class="input-group">
+            <label>IMAGE URL</label>
+            <input type="text" id="edit-image" class="input-field">
+        </div>
+        <div id="editor-container"></div>
+        <div style="text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
+            <button class="btn" style="background: #888;" onclick="closeModal()">Cancel</button>
+            <button class="btn" style="background: var(--gold);" onclick="saveEdit('draft')">Save Draft</button>
+            <button class="btn" onclick="saveEdit('published')">Publish Live</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+<script>
+    const quill = new Quill('#editor-container', { theme: 'snow' });
+    let allPosts = [];
+    let currentId = null;
+
+    async function fetchPosts() {
+        const list = document.getElementById('posts-list');
+        try {
+            const res = await fetch('/.netlify/functions/blog-posts');
+            allPosts = await res.json();
+            render();
+        } catch (e) { list.innerHTML = "Error loading posts."; }
+    }
+
+    function render() {
+        const list = document.getElementById('posts-list');
+        if (!allPosts || allPosts.length === 0) {
+            list.innerHTML = "No posts found."; return;
         }
-        load();
-    </script>
+
+        list.innerHTML = allPosts.sort((a,b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map(p => `
+            <div class="post-card">
+                <img class="post-thumb" src="${p.displayImage || ''}" onerror="this.src='https://via.placeholder.com/120x80?text=Cabo'">
+                <div class="post-info">
+                    <div class="status-tag ${p.status === 'published' ? 'published' : ''}">${p.status || 'DRAFT'}</div>
+                    <h3>${p.title || 'Untitled'}</h3>
+                </div>
+                <button class="btn" style="background: var(--sand); color: var(--deep-ocean);" onclick="openEdit('${p.id}')">Edit</button>
+            </div>
+        `).join('');
+    }
+
+    function openEdit(id) {
+        currentId = id;
+        const post = allPosts.find(p => p.id === id);
+        document.getElementById('edit-title').value = post.title || "";
+        document.getElementById('edit-image').value = post.displayImage || "";
+        quill.root.innerHTML = post.content.includes('<p>') ? post.content : (window.marked ? marked.parse(post.content || "") : post.content);
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
+
+    async function saveEdit(status) {
+        const password = prompt("Admin Password:");
+        const payload = {
+            title: document.getElementById('edit-title').value,
+            displayImage: document.getElementById('edit-image').value,
+            content: quill.root.innerHTML,
+            status: status,
+            date: new Date().toISOString()
+        };
+        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${currentId}&action=edit`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        closeModal();
+        fetchPosts();
+    }
+
+    function generateNew() {
+        const password = prompt("Admin Password:");
+        if(password) window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
+    }
+
+    fetchPosts();
+</script>
 </body>
 </html>
