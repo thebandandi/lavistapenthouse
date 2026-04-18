@@ -1,124 +1,142 @@
-<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
-<script>
-    let quill = new Quill('#editor-container', { theme: 'snow' });
-    let allPosts = [];
-    let activePostId = null;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Vista Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <style>
+        :root { --sand: #d6c9b1; --warm-white: #faf9f6; --deep-ocean: #1a2e35; --gold: #c5a059; }
+        body { font-family: 'Inter', sans-serif; background: var(--warm-white); margin: 0; padding: 40px 20px; }
+        .admin-container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; border: 1px solid #e8e4dc; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--sand); padding-bottom: 20px; margin-bottom: 20px; }
+        h1 { font-family: 'Playfair Display', serif; color: var(--deep-ocean); margin: 0; }
+        .btn { background: var(--deep-ocean); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; text-transform: uppercase; font-size: 12px; }
+        .btn:hover { background: var(--gold); }
+        
+        .post-card { display: flex; gap: 20px; padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; align-items: center; }
+        .post-thumb { width: 100px; height: 70px; object-fit: cover; border-radius: 4px; background: #eee; }
+        .post-info { flex: 1; }
+        .status { font-size: 10px; font-weight: 700; color: var(--gold); }
+        
+        /* Modal */
+        #edit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; width: 90%; max-width: 800px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
+        #editor-container { height: 300px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 10px; font-weight: 800; margin-bottom: 5px; }
+        .input-field { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
 
-    async function loadPosts() {
-        const listEl = document.getElementById('posts-list');
+<div class="admin-container">
+    <header>
+        <h1>La Vista Admin</h1>
+        <button class="btn" onclick="generateNew()">+ New Draft</button>
+    </header>
+
+    <div id="posts-list">
+        <p style="text-align: center;">Loading your penthouse updates...</p>
+    </div>
+</div>
+
+<div id="edit-modal">
+    <div class="modal-content">
+        <div class="input-group">
+            <label>TITLE</label>
+            <input type="text" id="edit-title" class="input-field">
+        </div>
+        <div class="input-group">
+            <label>IMAGE URL</label>
+            <input type="text" id="edit-image" class="input-field">
+        </div>
+        
+        <div id="editor-container"></div>
+
+        <div style="text-align: right;">
+            <button class="btn" style="background: #999;" onclick="closeModal()">Cancel</button>
+            <button class="btn" onclick="savePost()">Save & Publish</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Initialize Quill AFTER the HTML has loaded
+    const quill = new Quill('#editor-container', { theme: 'snow' });
+    let allPosts = [];
+    let currentId = null;
+
+    async function fetchAll() {
+        console.log("Fetching posts...");
         try {
-            const response = await fetch('/.netlify/functions/blog-posts');
-            const data = await response.json();
-            
-            // Handle both Array and Object responses (Netlify Blobs can vary)
-            allPosts = Array.isArray(data) ? data : (data.posts || []);
-            
-            console.log("Verified Data:", allPosts); 
+            const res = await fetch('/.netlify/functions/blog-posts');
+            allPosts = await res.json();
+            console.log("Fetched:", allPosts);
             render();
-        } catch (e) {
-            console.error("Fetch Error:", e);
-            listEl.innerHTML = `<p style="text-align:center; color:red;">Connection Error. Please refresh.</p>`;
+        } catch (err) {
+            document.getElementById('posts-list').innerHTML = "Error loading database.";
         }
     }
 
     function render() {
-        const listEl = document.getElementById('posts-list');
-        
+        const list = document.getElementById('posts-list');
         if (!allPosts || allPosts.length === 0) {
-            listEl.innerHTML = `<p style="text-align:center; padding: 40px;">No posts found in database.</p>`;
+            list.innerHTML = "No posts found.";
             return;
         }
 
-        let html = '';
-        
-        // Sort safely
-        const sorted = allPosts.sort((a, b) => {
-            const dateA = new Date(a.date || a.createdAt || 0);
-            const dateB = new Date(b.date || b.createdAt || 0);
-            return dateB - dateA;
-        });
-
-        sorted.forEach(post => {
-            try {
-                // Ensure we have a valid ID and Title to show the card
-                const id = post.id || post.key || 'unknown';
-                const title = post.title || 'Untitled Cabo Update';
-                const img = post.displayImage || 'https://via.placeholder.com/120x80?text=La+Vista';
-                const status = post.status || 'draft';
-                
-                const dateObj = new Date(post.date || post.createdAt);
-                const dateStr = isNaN(dateObj) ? 'New Update' : dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                html += `
-                    <div class="post-card">
-                        <img class="post-thumb" src="${img}" onerror="this.src='https://via.placeholder.com/120x80?text=Cabo'">
-                        <div class="post-info">
-                            <div class="post-meta">
-                                ${dateStr}
-                                <span class="status-badge ${status === 'published' ? 'published' : ''}">${status.toUpperCase()}</span>
-                            </div>
-                            <h3>${title}</h3>
-                        </div>
-                        <div class="post-actions">
-                            <button class="btn" style="background: var(--sand); color: var(--deep-ocean);" onclick="openModal('${id}')">Edit</button>
-                        </div>
-                    </div>
-                `;
-            } catch (err) {
-                console.warn("Skipping a malformed post:", err);
-            }
-        });
-
-        listEl.innerHTML = html;
+        list.innerHTML = allPosts.map(p => `
+            <div class="post-card">
+                <img class="post-thumb" src="${p.displayImage || ''}" onerror="this.src='https://via.placeholder.com/100x70'">
+                <div class="post-info">
+                    <div class="status">${(p.status || 'DRAFT').toUpperCase()}</div>
+                    <h3 style="margin: 5px 0; font-family: 'Playfair Display';">${p.title || 'Untitled'}</h3>
+                </div>
+                <button class="btn" style="background: var(--sand); color: #1a2e35;" onclick="openEdit('${p.id}')">Edit</button>
+            </div>
+        `).join('');
     }
 
-    function openModal(id) {
-        activePostId = id;
-        const post = allPosts.find(p => (p.id === id || p.key === id));
-        if (!post) return alert("Post data not found.");
-
+    function openEdit(id) {
+        currentId = id;
+        const post = allPosts.find(p => p.id === id);
         document.getElementById('edit-title').value = post.title || "";
         document.getElementById('edit-image').value = post.displayImage || "";
-        
-        const content = post.content || "";
-        quill.root.innerHTML = content.includes('<p>') ? content : marked.parse(content);
-        document.getElementById('edit-modal').classList.add('open');
+        quill.root.innerHTML = post.content.includes('<p>') ? post.content : marked.parse(post.content || "");
+        document.getElementById('edit-modal').style.display = 'flex';
     }
 
-    function closeModal() { document.getElementById('edit-modal').classList.remove('open'); }
+    function closeModal() { document.getElementById('edit-modal').style.display = 'none'; }
 
-    async function saveAction(status) {
+    async function savePost() {
         const password = prompt("Admin Password:");
-        if (!password) return;
-
-        const data = {
+        const payload = {
             title: document.getElementById('edit-title').value,
             displayImage: document.getElementById('edit-image').value,
             content: quill.root.innerHTML,
-            status: status,
+            status: 'published',
             date: new Date().toISOString()
         };
-
-        try {
-            const res = await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${activePostId}&action=edit`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                closeModal();
-                loadPosts();
-            } else {
-                alert("Save failed. Check password.");
-            }
-        } catch (e) {
-            alert("Network error while saving.");
-        }
+        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${currentId}&action=edit`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        closeModal();
+        fetchAll();
     }
 
-    function triggerGen() {
+    function generateNew() {
         const password = prompt("Admin Password:");
-        if (password) window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
+        window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
     }
 
-    loadPosts();
+    // Start
+    fetchAll();
 </script>
+
+</body>
+</html>
