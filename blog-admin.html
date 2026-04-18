@@ -268,16 +268,33 @@
     async function deletePost() {
         if (!confirm("Permanently delete this post?")) return;
         const password = prompt("Admin Password:");
-        await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${activeId}&action=delete`, { method: 'POST' });
-        closeModal();
-        loadData();
+        if (!password) return;
+
+        try {
+            const res = await fetch(`/.netlify/functions/blog-posts?password=${password}&id=${activeId}&action=delete`, { 
+                method: 'POST' 
+            });
+
+            if (res.ok) {
+                console.log("Post deleted successfully");
+                closeModal();
+                loadData(); // This refreshes the list so the card disappears
+            } else {
+                const errData = await res.json();
+                alert("Delete failed: " + (errData.error || "Check password"));
+            }
+        } catch (e) {
+            alert("Error connecting to server.");
+        }
     }
 
     function generateNew() {
         const password = prompt("Admin Password:");
-        if(password) window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
+        // This opens in a new tab so you can watch the "Success" message
+        if (password) window.open(`/.netlify/functions/generate-blog-post?password=${password}`, '_blank');
     }
 
+    // Initial load
     loadData();
 </script>
 </body>
