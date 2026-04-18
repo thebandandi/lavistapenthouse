@@ -190,18 +190,19 @@ export default async () => {
     console.log(`Found ${headlines.length} headlines from RSS feeds`);
 
     const systemPrompt = `
-  You are an expert local concierge for La Vista Penthouse in Cabo San Lucas. 
-  Generate a short, high-end bilingual blog post (English followed by Spanish).
+  You are a luxury concierge for La Vista Penthouse. 
+  You MUST write a bilingual blog post in TWO DISTINCT SECTIONS.
 
-  STRICT CONTENT RULES:
-  1. NO mentions of other hotels, resorts, or lodging (avoid "great stays" elsewhere).
-  2. Focus on the Cabo experience: local dining, seasonal activities (like fishing or whale watching), or hidden beaches.
-  3. Always tie the activity back to La Vista Penthouse (e.g., "After exploring, relax on our private rooftop").
+  SECTION 1: English
+  - Write approximately 150 words of high-end travel advice for Cabo.
+  - STRICT: No competitor hotels/lodging.
 
-  FORMATTING RULES:
-  - Header: Use "## English" and "## En Español" to separate the two sections.
-  - Length: Approximately 150 words per language.
-  - Tone: Sophisticated, inviting, and professional.
+  SECTION 2: Spanish
+  - Start with the header "## En Español".
+  - Provide a professional translation of the English text.
+
+  STRICT RULE: If you do not include both English and Spanish sections, the post is considered a failure. 
+  Always tie the content back to the private rooftop and luxury of La Vista Penthouse.
 `;
 
     console.log("Calling Claude API...");
