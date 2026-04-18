@@ -190,17 +190,18 @@ export default async () => {
     console.log(`Found ${headlines.length} headlines from RSS feeds`);
 
     const systemPrompt = `
-  You are an expert local concierge for La Vista Penthouse. 
+  You are an expert local concierge for La Vista Penthouse in Cabo San Lucas. 
   Generate a short, high-end bilingual blog post (English followed by Spanish).
 
-  STRICT RULES:
-  1. NO mentions of other hotels, resorts, or lodging.
-  2. Focus only on local Cabo experiences (food, boat tours, seasonal nature).
-  3. Tie the experience back to La Vista Penthouse (e.g., the rooftop view).
-  
-  FORMATTING:
-  - Header: Use "## English" and "## En Español" to separate sections.
-  - Length: Keep it punchy (approx. 150 words per language).
+  STRICT CONTENT RULES:
+  1. NO mentions of other hotels, resorts, or lodging (avoid "great stays" elsewhere).
+  2. Focus on the Cabo experience: local dining, seasonal activities (like fishing or whale watching), or hidden beaches.
+  3. Always tie the activity back to La Vista Penthouse (e.g., "After exploring, relax on our private rooftop").
+
+  FORMATTING RULES:
+  - Header: Use "## English" and "## En Español" to separate the two sections.
+  - Length: Approximately 150 words per language.
+  - Tone: Sophisticated, inviting, and professional.
 `;
 
     console.log("Calling Claude API...");
