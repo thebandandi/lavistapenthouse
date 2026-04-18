@@ -13,8 +13,9 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // This is the "Universal" stable endpoint that does not expire.
-    const baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
+    // Using the 'v1beta' with 'gemini-1.5-flash-latest' 
+    // This is the most compatible combination for Free Tier keys in 2026.
+    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
     const endpoint = baseUrl + geminiKey.trim();
     
     const aiResponse = await fetch(endpoint, {
@@ -23,7 +24,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Write a luxury bilingual blog post for La Vista Penthouse. Focus on Cabo events for April 2026. Structure: English Title, English Body (150 words), then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
+            text: "Write a luxury bilingual blog post for La Vista Penthouse Cabo. Include one local event from https://www.visitloscabos.travel/events/ for April/May 2026. Structure: English Title, English Body, then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
           }]
         }]
       })
@@ -31,7 +32,7 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
-    // Catching the 404 or Quota issues before the code crashes
+    // Check for Google-specific errors
     if (data.error) {
       return new Response(JSON.stringify({ error: "Google API Error", details: data.error }), { status: 500 });
     }
@@ -51,14 +52,14 @@ export default async (req, context) => {
     const postId = 'post-' + Date.now();
     await store.set(postId, JSON.stringify({
       id: postId,
-      title: title,
+      title: title || "Cabo Luxury Update",
       content: blogBody,
       displayImage: displayImage,
       status: 'draft',
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success! Check your dashboard." }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success! Post is in your dashboard." }), { status: 200 });
 
   } catch (err) {
     return new Response(JSON.stringify({ error: "Server Error", message: err.message }), { status: 500 });
