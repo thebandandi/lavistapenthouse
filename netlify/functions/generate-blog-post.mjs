@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
   // CHANGED: Matching the most likely store name for your Claude drafts
-  const store = getStore("posts"); 
+  const store = getStore("blog-posts"); 
   const url = new URL(req.url);
   const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
   const geminiKey = process.env.GEMINI_API_KEY;
