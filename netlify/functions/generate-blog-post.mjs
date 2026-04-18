@@ -1,256 +1,63 @@
 import { getStore } from "@netlify/blobs";
-import https from "https";
-import http from "http";
+import OpenAI from "openai";
 
-// ── News RSS feeds for Cabo San Lucas ────────────────────────────────────────
-const RSS_FEEDS = [
-  { name: "Los Cabos Guide",     url: "https://www.loscabosguide.com/feed/" },
-  { name: "The Baja Post",       url: "https://thebajapost.com/feed/" },
-  { name: "Baja California Sur", url: "https://bajasur.com.mx/feed/" },
-  { name: "Los Cabos Tourism",   url: "https://www.visitloscabos.travel/feed/" },
-  { name: "Gringo Gazette",      url: "https://gringogazette.com/feed/" },
-];
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const TOPICS = [
-  "things to do in Cabo San Lucas this week",
-  "best restaurants in Cabo San Lucas",
-  "water activities and tours in Cabo San Lucas",
-  "events and festivals in Cabo San Lucas",
-  "travel tips for visiting Cabo San Lucas",
-  "beaches and outdoor activities in Cabo San Lucas",
-  "nightlife and entertainment in Cabo San Lucas",
-  "local news and updates from Cabo San Lucas",
-];
+export default async (req, context) => {
+  const store = getStore("blog-posts");
+  const url = new URL(req.url);
+  const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
 
-const IMAGE_QUERIES = {
-  "things to do":    "Cabo San Lucas Mexico activities",
-  "restaurants":     "Cabo San Lucas restaurant dining",
-  "water activities":"Cabo San Lucas ocean water sports",
-  "events":          "Cabo San Lucas festival Mexico",
-  "travel tips":     "Cabo San Lucas Mexico travel",
-  "beaches":         "Cabo San Lucas beach Mexico",
-  "nightlife":       "Cabo San Lucas nightlife Mexico",
-  "local news":      "Cabo San Lucas Mexico scenery",
-};
-
-function generateSlug(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").substring(0, 80);
-}
-
-function getImageQuery(topic) {
-  for (const [key, query] of Object.entries(IMAGE_QUERIES)) {
-    if (topic.toLowerCase().includes(key)) return query;
+  // 1. Security Check
+  const password = url.searchParams.get("password");
+  if (password !== passwordHeader) {
+    return new Response("Unauthorized", { status: 401 });
   }
-  return "Cabo San Lucas Mexico";
-}
 
-// Fetch and parse RSS feed headlines
-function fetchRSSHeadlines(feedUrl) {
-  return new Promise((resolve) => {
-    const url = new URL(feedUrl);
-    const lib = url.protocol === "https:" ? https : http;
-    const req = lib.request({
-      hostname: url.hostname,
-      path: url.pathname + url.search,
-      method: "GET",
-      headers: { "User-Agent": "LaVistaPenthouse-Blog/1.0" },
-    }, (res) => {
-      // Handle redirects
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        fetchRSSHeadlines(res.headers.location).then(resolve);
-        return;
-      }
-      let data = "";
-      res.on("data", chunk => (data += chunk));
-      res.on("end", () => {
-        try {
-          // Extract titles from RSS XML
-          const titles = [];
-          const titleRegex = /<item[^>]*>[\s\S]*?<title[^>]*><!\[CDATA\[(.*?)\]\]><\/title>|<item[^>]*>[\s\S]*?<title[^>]*>(.*?)<\/title>/gi;
-          let match;
-          while ((match = titleRegex.exec(data)) !== null && titles.length < 5) {
-            const title = (match[1] || match[2] || "").trim();
-            if (title && title.length > 5) titles.push(title);
-          }
-          resolve({ feed: feedUrl, titles });
-        } catch (e) {
-          resolve({ feed: feedUrl, titles: [] });
-        }
-      });
-    });
-    req.on("error", () => resolve({ feed: feedUrl, titles: [] }));
-    req.setTimeout(5000, () => { req.destroy(); resolve({ feed: feedUrl, titles: [] }); });
-    req.end();
-  });
-}
-
-// Fetch all RSS feeds in parallel
-async function fetchAllHeadlines() {
-  const results = await Promise.all(RSS_FEEDS.map(f => fetchRSSHeadlines(f.url)));
-  const headlines = [];
-  results.forEach((result, i) => {
-    if (result.titles.length > 0) {
-      headlines.push(`From ${RSS_FEEDS[i].name}:`);
-      result.titles.forEach(t => headlines.push(`  • ${t}`));
-    }
-  });
-  return headlines;
-}
-
-function fetchUnsplashImage(query) {
-  return new Promise((resolve) => {
-    const encodedQuery = encodeURIComponent(query);
-    const req = https.request({
-      hostname: "api.unsplash.com",
-      path: `/search/photos?query=${encodedQuery}&per_page=10&orientation=landscape`,
-      method: "GET",
-      headers: {
-        "Authorization": `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
-        "Accept-Version": "v1",
-      },
-    }, (res) => {
-      let data = "";
-      res.on("data", chunk => (data += chunk));
-      res.on("end", () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.results && parsed.results.length > 0) {
-            const idx = Math.floor(Math.random() * Math.min(parsed.results.length, 5));
-            const photo = parsed.results[idx];
-            resolve({
-              url: photo.urls.regular,
-              thumb: photo.urls.small,
-              photographer: photo.user.name,
-              photographerUrl: photo.user.links.html,
-              alt: photo.alt_description || query,
-            });
-          } else { resolve(null); }
-        } catch (e) { resolve(null); }
-      });
-    });
-    req.on("error", () => resolve(null));
-    req.end();
-  });
-}
-
-function callClaude(prompt) {
-  return new Promise((resolve, reject) => {
-    const payload = JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const req = https.request({
-      hostname: "api.anthropic.com",
-      path: "/v1/messages",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY.trim(),
-        "anthropic-version": "2023-06-01",
-        "Content-Length": Buffer.byteLength(payload),
-      },
-    }, (res) => {
-      let data = "";
-      res.on("data", chunk => (data += chunk));
-      res.on("end", () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) { reject(new Error(parsed.error.message)); return; }
-          if (!parsed.content || !parsed.content[0]) { reject(new Error("No content: " + data)); return; }
-          resolve(parsed.content[0].text);
-        } catch (e) { reject(new Error("Parse error: " + e.message)); }
-      });
-    });
-    req.on("error", reject);
-    req.write(payload);
-    req.end();
-  });
-}
-
-export default async () => {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) { console.error("ANTHROPIC_API_KEY not set"); return; }
-
-    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-    const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-    console.log("Topic:", topic);
-
-    // Fetch news headlines and image in parallel
-    console.log("Fetching news headlines and image...");
-    const [headlines, image] = await Promise.all([
-      fetchAllHeadlines(),
-      process.env.UNSPLASH_ACCESS_KEY ? fetchUnsplashImage(getImageQuery(topic)) : Promise.resolve(null),
-    ]);
-
-    const newsContext = headlines.length > 0
-      ? `\n\nHere are recent headlines from Cabo news sources to help inform your post:\n${headlines.join("\n")}`
-      : "";
-
-    console.log(`Found ${headlines.length} headlines from RSS feeds`);
-
-    const systemPrompt = `
-  You are a luxury concierge for La Vista Penthouse. 
-  You MUST write a bilingual blog post in TWO DISTINCT SECTIONS.
-
-  SECTION 1: English
-  - Write a high-end travel tip for Cabo (approx 150 words).
-  - STRICT: No competitor hotels/lodging.
-
-  SECTION 2: En Español
-  - Start with the header "## En Español".
-  - Provide a professional translation of the English text.
-
-  STRICT RULE: Both sections are mandatory. Tie it back to the La Vista Penthouse rooftop view.
-`;
-
-    console.log("Calling Claude API...");
-    const raw = await callClaude(prompt);
-
-    let post;
-    try {
-      const clean = raw.replace(/```json|```/g, "").trim();
-      post = JSON.parse(clean);
-    } catch (e) {
-      try {
-        const start = raw.indexOf("{");
-        const end = raw.lastIndexOf("}");
-        if (start !== -1 && end !== -1) {
-          post = JSON.parse(raw.substring(start, end + 1));
-        } else {
-          console.error("No JSON found:", raw.substring(0, 300));
-          return;
-        }
-      } catch (e2) {
-        console.error("JSON parse failed:", raw.substring(0, 300));
-        return;
-      }
-    }
-
-    const store = getStore("blog-posts");
-    const id = `draft-${Date.now()}`;
-    await store.setJSON(id, {
-      id,
-      slug: generateSlug(post.title),
-      title: post.title,
-      excerpt: post.excerpt,
-      content: post.content,
-      tags: post.tags || [],
-      topic,
-      status: "draft",
-      createdAt: new Date().toISOString(),
-      publishedAt: null,
-      image: image || null,
-      // Store prompt and sources for admin visibility
-      promptUsed: prompt,
-      newsSources: RSS_FEEDS.map(f => f.name),
-      headlinesUsed: headlines,
+    // 2. Faster AI Request (Lower tokens = less chance of timeout)
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Faster and cheaper
+      messages: [
+        {
+          role: "system",
+          content: `You are a luxury concierge for La Vista Penthouse. 
+          Write a short bilingual blog post. 
+          Section 1: English (120 words). 
+          Section 2: "## En Español" followed by Spanish translation.
+          Rules: No other hotels. Focus on Cabo local life and La Vista's rooftop luxury.`
+        },
+        { role: "user", content: "Write a post about the best local seasonal activities in Cabo for April." }
+      ],
+      max_tokens: 800
     });
-    console.log("Draft saved successfully:", post.title);
+
+    const content = completion.choices[0].message.content;
+    const title = content.split('\n')[0].replace('##', '').trim(); // Grabs the first line as title
+
+    // 3. Simple Image fallback (Prevents Unsplash crashes)
+    const displayImage = "https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=1200&q=80";
+
+    // 4. Save to Store
+    const postId = `post-${Date.now()}`;
+    const newPost = {
+      title: title || "New Cabo Update",
+      content: content,
+      status: "draft",
+      date: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      displayImage: displayImage
+    };
+
+    await store.set(postId, JSON.stringify(newPost));
+
+    return new Response(JSON.stringify({ message: "Draft Created!", post: newPost }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
 
   } catch (err) {
-    console.error("Blog generation error:", err.message || err);
+    console.error("Error:", err);
+    return new Response("Error: " + err.message, { status: 500 });
   }
 };
-
-export const config = { schedule: "0 0 * * 1" };
