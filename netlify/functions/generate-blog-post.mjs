@@ -14,7 +14,7 @@ export default async (req, context) => {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
     // Using the current stable v1beta for better web-search/grounding capabilities
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey.trim()}`;
+    const endpoint = https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()};
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
