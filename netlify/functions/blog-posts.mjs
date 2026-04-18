@@ -1,38 +1,30 @@
 import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
-  // STEP 1: Try 'posts'. If still empty after deploy, change this to 'site'
-  const STORE_NAME = "content"; 
-  
-  try {
-    const store = getStore(STORE_NAME);
-    const list = await store.list();
-    const posts = [];
+  // We'll try the most common one, but the goal here is the ERROR log below
+  const TEST_NAMES = ["posts", "site", "blog-posts", "blog", "data", "storage"];
+  let discovery = {};
 
-    for (const item of list.blobs) {
-      const raw = await store.get(item.key);
-      try {
-        const data = JSON.parse(raw);
-        posts.push({ ...data, id: item.key });
-      } catch (parseErr) {
-        // Skip corrupted files
-        continue; 
-      }
+  try {
+    for (const name of TEST_NAMES) {
+      const store = getStore(name);
+      const list = await store.list();
+      discovery[name] = list.blobs.length;
     }
 
-    // Sort by date (newest first)
-    posts.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
-
-    return new Response(JSON.stringify(posts), {
+    return new Response(JSON.stringify({
+      message: "Discovery Scan Complete",
+      results: discovery,
+      hint: "Look for the name that doesn't say 0"
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
 
   } catch (error) {
-    // If this fails, it will return JSON instead of an HTML error
-    return new Response(JSON.stringify({ error: error.message, store: STORE_NAME }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      advice: "Ensure 'Netlify Blobs' is still enabled in your Netlify UI under Site Settings > Data"
+    }), { status: 500 });
   }
 };
