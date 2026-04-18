@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local News | La Vista Penthouse Cabo</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
-    <style>
+ </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
         :root { --deep-ocean: #1a3a4a; --terracotta: #c4714a; --warm-white: #faf8f4; --border: #e0d8cc; --gold: #c9a84c; }
         body { font-family: 'DM Sans', sans-serif; background: var(--warm-white); color: #1c1c1c; margin: 0; }
         nav { padding: 20px 48px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff; }
@@ -27,14 +30,23 @@
             .post-body { padding: 24px; }
             h1 { font-size: 36px; }
         }
-    </style>
-</head>
-<body>
-    <nav><a href="/" class="nav-logo">La Vista <span>Penthouse</span></a></nav>
-    <div class="container">
-        <h1>Local News & Updates</h1>
-        <div id="blog-container">Loading latest updates from Cabo...</div>
-    </div>
+    /* This makes the 'En Español' header look like a professional divider */
+.post-content h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    color: var(--terracotta);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    padding-top: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Optional: Make the Spanish text slightly distinct */
+.spanish-text {
+    color: #555;
+    line-height: 1.8;
+}
 
     <script>
     async function loadPosts() {
@@ -62,7 +74,7 @@
                             <div class="post-body">
                                 <div class="post-date">${new Date(postDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
                                 <h2 class="post-title">${p.title}</h2>
-                                <div class="post-content">${p.content}</div>
+                                <div class="post-content">${marked.parse(p.content)}</div>
                             </div>
                         </article>
                     `;
