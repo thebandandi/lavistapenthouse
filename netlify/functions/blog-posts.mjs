@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
   // STEP 1: Try 'posts'. If still empty after deploy, change this to 'site'
-  const STORE_NAME = "posts"; 
+  const STORE_NAME = "site"; 
   
   try {
     const store = getStore(STORE_NAME);
