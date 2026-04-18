@@ -13,9 +13,9 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // Using the 'v1beta' with 'gemini-1.5-flash-latest' 
-    // This is the most compatible combination for Free Tier keys in 2026.
-    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
+    // APRIL 2026 OFFICIAL MODEL: gemini-3.1-flash-preview
+    // This model replaced all 1.5 and 2.0 versions this month.
+    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-preview:generateContent?key=';
     const endpoint = baseUrl + geminiKey.trim();
     
     const aiResponse = await fetch(endpoint, {
@@ -24,7 +24,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Write a luxury bilingual blog post for La Vista Penthouse Cabo. Include one local event from https://www.visitloscabos.travel/events/ for April/May 2026. Structure: English Title, English Body, then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
+            text: "Write a luxury bilingual blog post for La Vista Penthouse Cabo. Focus on Cabo events for April 2026 using your internal knowledge. Structure: English Title, English Body, then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
           }]
         }]
       })
@@ -32,7 +32,6 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
-    // Check for Google-specific errors
     if (data.error) {
       return new Response(JSON.stringify({ error: "Google API Error", details: data.error }), { status: 500 });
     }
@@ -44,10 +43,10 @@ export default async (req, context) => {
     const fullText = data.candidates[0].content.parts[0].text;
     const contentParts = fullText.split('IMG_KEYWORDS:');
     const blogBody = contentParts[0].trim();
-    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury";
+    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury,Beach";
     
     const title = blogBody.split('\n')[0].replace(/#/g, '').trim();
-    const displayImage = 'https://source.unsplash.com/800x600/?' + encodeURIComponent(keywords);
+    const displayImage = 'https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=800&q=80'; // Stable fallback
 
     const postId = 'post-' + Date.now();
     await store.set(postId, JSON.stringify({
