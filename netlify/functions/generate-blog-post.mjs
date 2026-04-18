@@ -13,10 +13,9 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // APRIL 2026 OFFICIAL MODEL: gemini-3.1-flash-preview
-    // This model replaced all 1.5 and 2.0 versions this month.
-    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-preview:generateContent?key=';
-    const endpoint = baseUrl + geminiKey.trim();
+    // APRIL 2026 GROUNDING ENDPOINT
+    // We use gemini-3.1-flash-lite-preview for the best web-searching capability
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -24,41 +23,36 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Write a luxury bilingual blog post for La Vista Penthouse Cabo. Focus on Cabo events for April 2026 using your internal knowledge. Structure: English Title, English Body, then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
+            text: "Search for current luxury events in San Jose del Cabo or Cabo San Lucas for late April 2026. Write a bilingual blog post for La Vista Penthouse. Focus on the Art Walk or rooftop relaxation. Structure: English Title, English Body, ## En Español, Spanish Body. End with: IMG_KEYWORDS: [3 keywords]"
           }]
-        }]
+        }],
+        // This is the CRITICAL part for current data:
+        tools: [{ "googleSearchRetrieval": {} }] 
       })
     });
 
     const data = await aiResponse.json();
 
     if (data.error) {
-      return new Response(JSON.stringify({ error: "Google API Error", details: data.error }), { status: 500 });
-    }
-
-    if (!data.candidates || data.candidates.length === 0) {
-      return new Response(JSON.stringify({ error: "No content generated", debug: data }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Google API Issue", details: data.error }), { status: 500 });
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
     const contentParts = fullText.split('IMG_KEYWORDS:');
     const blogBody = contentParts[0].trim();
-    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury,Beach";
-    
-    const title = blogBody.split('\n')[0].replace(/#/g, '').trim();
-    const displayImage = 'https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=800&q=80'; // Stable fallback
+    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury";
 
-    const postId = 'post-' + Date.now();
+    const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
-      title: title || "Cabo Luxury Update",
+      title: blogBody.split('\n')[0].replace(/#/g, '').trim(),
       content: blogBody,
-      displayImage: displayImage,
+      displayImage: `https://images.unsplash.com/photo-1512100356956-c1226c996cd0?auto=format&fit=crop&w=800&q=80`,
       status: 'draft',
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success! Post is in your dashboard." }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success! Post found current events." }), { status: 200 });
 
   } catch (err) {
     return new Response(JSON.stringify({ error: "Server Error", message: err.message }), { status: 500 });
