@@ -1,10 +1,11 @@
 import { getStore } from "@netlify/blobs";
 
-export const handler = async (event) => {
-  // Pointing to 'posts' to find your missing 50 drafts
-  const store = getStore("posts");
+export default async (req, context) => {
+  // STEP 1: Try 'posts'. If still empty after deploy, change this to 'site'
+  const STORE_NAME = "posts"; 
   
   try {
+    const store = getStore(STORE_NAME);
     const list = await store.list();
     const posts = [];
 
@@ -12,25 +13,26 @@ export const handler = async (event) => {
       const raw = await store.get(item.key);
       try {
         const data = JSON.parse(raw);
-        // We include the key as the ID just in case
         posts.push({ ...data, id: item.key });
       } catch (parseErr) {
-        console.error(`Error parsing blob ${item.key}`);
+        // Skip corrupted files
+        continue; 
       }
     }
 
-    return {
-      statusCode: 200,
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*" 
-      },
-      body: JSON.stringify(posts),
-    };
+    // Sort by date (newest first)
+    posts.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+
+    return new Response(JSON.stringify(posts), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+
   } catch (error) {
-    return { 
-      statusCode: 500, 
-      body: JSON.stringify({ error: "Failed to list store 'posts'", details: error.message }) 
-    };
+    // If this fails, it will return JSON instead of an HTML error
+    return new Response(JSON.stringify({ error: error.message, store: STORE_NAME }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 };
