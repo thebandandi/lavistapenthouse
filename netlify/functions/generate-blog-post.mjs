@@ -13,8 +13,9 @@ export default async (req, context) => {
   try {
     if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
 
-    // Using single quotes here to prevent the "Expected ;" backtick error
-    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+    // UPDATED FOR APRIL 2026: 
+    // gemini-3-flash-preview is the current stable flash model.
+    const baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=';
     const endpoint = baseUrl + geminiKey.trim();
     
     const aiResponse = await fetch(endpoint, {
@@ -23,7 +24,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "You are a luxury concierge for La Vista Penthouse. TASK: Check https://www.visitloscabos.travel/events/ for upcoming events in April/May 2026. Write a bilingual blog post (English section, then '## En Español', then Spanish section). Include 1 specific event from the site. No other hotels. End the post with: IMG_KEYWORDS: [3 keywords]"
+            text: "Write a luxury bilingual blog post for La Vista Penthouse. TASK: Include one local event for April/May 2026 in Cabo. Structure: English Title, English Body, then '## En Español', then Spanish Body. End with IMG_KEYWORDS: [3 keywords]"
           }]
         }]
       })
@@ -31,37 +32,29 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
-    if (!data || !data.candidates || data.candidates.length === 0) {
-      return new Response(JSON.stringify({
-        error: "Quota or API Issue",
-        debug: data 
-      }), { status: 500, headers: { "Content-Type": "application/json" } });
+    if (!data || !data.candidates) {
+      return new Response(JSON.stringify({ error: "API Version Error", debug: data }), { status: 500 });
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
     const contentParts = fullText.split('IMG_KEYWORDS:');
     const blogBody = contentParts[0].trim();
-    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury,Beach";
+    const keywords = contentParts[1] ? contentParts[1].trim().replace(/[\[\]]/g, '') : "Cabo,Luxury";
     
-    const lines = blogBody.split('\n').filter(l => l.trim() !== "");
-    const title = lines[0].replace(/#/g, '').trim();
+    const title = blogBody.split('\n')[0].replace(/#/g, '').trim();
     const displayImage = 'https://source.unsplash.com/800x600/?' + encodeURIComponent(keywords);
 
     const postId = 'post-' + Date.now();
     await store.set(postId, JSON.stringify({
       id: postId,
-      title: title || "New Cabo Update",
+      title: title,
       content: blogBody,
       displayImage: displayImage,
       status: "draft",
-      date: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success!" }), { 
-      status: 200, 
-      headers: { "Content-Type": "application/json" } 
-    });
+    return new Response(JSON.stringify({ message: "Success!" }), { status: 200 });
 
   } catch (err) {
     return new Response(JSON.stringify({ error: "Runtime Error", message: err.message }), { status: 500 });
