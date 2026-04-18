@@ -43,9 +43,9 @@
   .post-item-content { flex-grow: 1; }
   .post-item-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:10px; }
   .post-item-title { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; color:var(--deep-ocean); line-height:1.3; }
-  .post-item-meta { font-size:12px; color:var(--muted); margin-bottom:8px; }
-  .post-item-excerpt { font-size:13px; color:#444; line-height:1.6; margin-bottom:16px; }
-  .post-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .post-item-meta { font-size:12px; color:var(--muted); margin-bottom:8px; line-height: 1.4; }
+  .post-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 15px; }
+  
   .btn { padding:9px 20px; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .2s; }
   .btn-publish { background:var(--success); color:#fff; }
   .btn-edit { background:var(--deep-ocean); color:#fff; }
@@ -60,7 +60,7 @@
   .modal-overlay.open { display:flex; }
   .modal { background:#fff; border-radius:16px; padding:30px; max-width:850px; width:100%; max-height:90vh; overflow-y:auto; position: relative; }
   .modal-close { position: absolute; top: 15px; right: 20px; background:none; border:none; font-size:28px; cursor:pointer; color:var(--muted); }
-  #editor-container { height: 400px; margin-bottom: 20px; border-radius: 8px; }
+  #editor-container { height: 450px; margin-bottom: 20px; border-radius: 8px; }
   .edit-title-input { width: 100%; padding: 12px; font-size: 20px; font-family: 'Cormorant Garamond', serif; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; }
 
   .generate-section { background:var(--sand); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
@@ -126,6 +126,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
 <script>
@@ -133,12 +134,12 @@ let adminKey = '';
 let allPosts = [];
 let currentEditingId = null;
 
-// Initialize Quill
+// Initialize Quill with Header support
 const quill = new Quill('#editor-container', {
   theme: 'snow',
   modules: {
     toolbar: [
-      [{ 'header': [1, 2, false] }],
+      [{ 'header': [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'link'],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
       ['clean']
@@ -205,7 +206,6 @@ function renderPostList(containerId, posts, type) {
   }
   
   el.innerHTML = posts.map(post => {
-    // FIX: This looks for the image in every possible place the AI might have saved it
     const thumbUrl = post.displayImage || 
                      (post.image && post.image.url) || 
                      (post.image && post.image.thumb) || 
@@ -219,11 +219,10 @@ function renderPostList(containerId, posts, type) {
           <div class="post-item-title">${post.title}</div>
           <span class="status-badge ${type === 'draft' ? 'badge-draft' : 'badge-published'}">${type}</span>
         </div>
-        // Replace your Step 3 line with this if you want more detail:
-<div class="post-item-meta">
-    Draft Created: ${fmtDate(post.createdAt || post.date)} 
-    ${post.publishedAt ? ` | Published: ${fmtDate(post.publishedAt)}` : ''}
-</div>
+        <div class="post-item-meta">
+            Draft Created: ${fmtDate(post.createdAt || post.date)} 
+            ${post.publishedAt ? ` | Published: ${fmtDate(post.publishedAt)}` : ''}
+        </div>
         <div class="post-actions">
           <button class="btn btn-edit" onclick="openEdit('${post.id}')">✏️ Edit</button>
           ${type === 'draft' ? 
@@ -235,6 +234,7 @@ function renderPostList(containerId, posts, type) {
       </div>
     </div>`}).join('');
 }
+
 function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 
 function openEdit(postId) {
@@ -242,7 +242,10 @@ function openEdit(postId) {
     if (!post) return;
     currentEditingId = postId;
     document.getElementById('edit-title').value = post.title;
-    quill.root.innerHTML = post.content;
+    
+    // Parse Markdown headers (##) so they show up as real headers in Quill
+    quill.root.innerHTML = marked.parse(post.content);
+    
     document.getElementById('edit-modal').classList.add('open');
 }
 
