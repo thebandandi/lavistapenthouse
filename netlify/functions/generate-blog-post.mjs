@@ -189,14 +189,19 @@ export default async () => {
 
     console.log(`Found ${headlines.length} headlines from RSS feeds`);
 
-    const prompt = `You are a travel writer for La Vista Penthouse, a luxury vacation rental in Cabo San Lucas, Mexico. Write an engaging blog post about: "${topic}". Today is ${today}.${newsContext}
+    const systemPrompt = `
+  You are an expert local concierge for La Vista Penthouse. 
+  Generate a short, high-end bilingual blog post (English followed by Spanish).
 
-Use the news headlines above as inspiration and context where relevant — weave in current local happenings naturally. Do not fabricate specific event details not mentioned in the headlines.
-
-IMPORTANT: Respond ONLY with a valid JSON object. No markdown, no backticks, no text before or after the JSON.
-
-Format exactly like this:
-{"title":"the title here","excerpt":"the excerpt here","content":"<p>paragraph one</p><p>paragraph two</p>","tags":["tag1","tag2","tag3"]}`;
+  STRICT RULES:
+  1. NO mentions of other hotels, resorts, or lodging.
+  2. Focus only on local Cabo experiences (food, boat tours, seasonal nature).
+  3. Tie the experience back to La Vista Penthouse (e.g., the rooftop view).
+  
+  FORMATTING:
+  - Header: Use "## English" and "## En Español" to separate sections.
+  - Length: Keep it punchy (approx. 150 words per language).
+`;
 
     console.log("Calling Claude API...");
     const raw = await callClaude(prompt);
