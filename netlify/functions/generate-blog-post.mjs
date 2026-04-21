@@ -21,51 +21,45 @@ export default async (req, context) => {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
-    // LAYER 1: The Request
     const aiResponse = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Search for luxury events in Cabo for the next 30 days at https://www.visitloscabos.travel/events/. Write a high-end bilingual blog for 'La Vista Penthouse'. Include the booking CTA button and end with SEARCH_TERM: [one word]."
+            text: `
+              TASK: Write a luxury bilingual blog post for 'La Vista Penthouse' about late April/May in Cabo.
+              
+              CONTENT FOCUS:
+              - The sophisticated vibe of the San Jose Art Walk (Thursdays).
+              - Seasonal highlights like the fresh catch at the Marina or the upcoming Arte Culinaria festival.
+              - Mention the private rooftop jacuzzi at La Vista as the perfect way to end a day exploring both towns.
+
+              STRUCTURE: 
+              - English Title & Body.
+              - ## En Español section with Spanish Title & Body.
+
+              MANDATORY CTA: Wrap this HTML button at the end of BOTH sections:
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="https://lavistapenthouse.com/#booking-widget" style="background-color: #1a3a4a; color: #c9a84c; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Check Availability & Book Direct</a>
+                <p style="font-size: 14px; margin-top: 15px; color: #6b6b6b;">Book direct to save 5%. After booking, contact hosts for event reservation assistance.</p>
+              </div>
+
+              End exactly with: SEARCH_TERM: [one word]
+            `
           }]
-        }],
-        tools: [{ "google_search": {} }]
+        }]
       })
     });
 
     const data = await aiResponse.json();
 
-    // LAYER 2: The "Ghost Response" Protection
-    // We check every single step of the data path before touching it.
-    let fullText = "";
-    if (data && data.candidates && data.candidates.length > 0 && 
-        data.candidates[0].content && data.candidates[0].content.parts && 
-        data.candidates[0].content.parts.length > 0) {
-        
-        fullText = data.candidates[0].content.parts[0].text;
-    } 
-
-    // LAYER 3: The Fallback (If Gemini failed to search)
-    if (!fullText || fullText.length < 10) {
-      console.warn("Gemini Search failed or returned empty. Running Fallback...");
-      const fallbackRes = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: "The web search was slow. Please write a luxury 'Welcome to Spring in Cabo' blog for La Vista Penthouse. Focus on the Art Walk and Marina. Include the standard booking CTA and SEARCH_TERM: [one word]."
-            }]
-          }]
-        })
-      });
-      const fallbackData = await fallbackRes.json();
-      fullText = fallbackData.candidates[0].content.parts[0].text;
+    // Safe reading of the response
+    if (!data.candidates || !data.candidates[0]) {
+      throw new Error("API returned no content. Please try again.");
     }
 
-    // Process the final text
+    const fullText = data.candidates[0].content.parts[0].text;
     const [blogBody, searchTermRaw] = fullText.split('SEARCH_TERM:');
     let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo";
 
@@ -83,7 +77,6 @@ export default async (req, context) => {
         }
     }
 
-    // Save to database
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
@@ -94,10 +87,9 @@ export default async (req, context) => {
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success", mode: data.candidates ? "Search" : "Fallback" }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
 
   } catch (err) {
-    console.error("Critical System Error:", err.message);
-    return new Response(JSON.stringify({ error: "System Error", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Generation Failed", details: err.message }), { status: 500 });
   }
 };
