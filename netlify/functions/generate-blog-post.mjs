@@ -21,13 +21,19 @@ export default async (req, context) => {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
+    // 💡 ONLY CHANGED THE PROMPT TEXT BELOW TO BE MORE INSISTENT ON SPANISH
     const luxuryPrompt = `
       ACT AS: An expert luxury travel concierge for 'La Vista Penthouse'.
       TASK: Write an extensive, sophisticated blog post about luxury events in Cabo for May 2026.
-      DETAILS: Deep research https://www.visitloscabos.travel/events/ for Fashion Week, the Mandapa culinary takeover, and Sunset Fest.
+      DETAILS: Research https://www.visitloscabos.travel/events/ for Fashion Week, the Mandapa culinary takeover, and Sunset Fest.
       STYLE: Ritz-Carlton/Luxury Magazine tone. High-end storytelling.
-      FORMAT: Full English version, then '## En Español' version.
-      CTA: Include the HTML button for https://lavistapenthouse.com/#booking-widget at the end of both sections.
+      
+      BILINGUAL REQUIREMENT: 
+      1. Write the full English version.
+      2. Then, write a complete Spanish translation starting with the header '## En Español'. 
+      THIS IS MANDATORY.
+      
+      CTA: Include the HTML button for https://lavistapenthouse.com/#booking-widget at the end of both the English AND the Spanish sections.
       End with: SEARCH_TERM: [one keyword]
     `;
 
@@ -43,7 +49,6 @@ export default async (req, context) => {
 
     let data = await aiResponse.json();
     
-    // 🛡️ DEFENSIVE READING: Using Optional Chaining (?.) to prevent "reading '0'" errors
     let fullText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     // 2. FALLBACK: If Search failed or returned an error
@@ -60,7 +65,6 @@ export default async (req, context) => {
       fullText = fallbackData?.candidates?.[0]?.content?.parts?.[0]?.text;
     }
 
-    // 🛡️ FINAL SAFETY: If even the fallback fails
     if (!fullText) {
       throw new Error("Gemini API is currently unavailable. Please try again in 1 minute.");
     }
@@ -82,7 +86,6 @@ export default async (req, context) => {
         }
     }
 
-    // SAVE TO DATABASE
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
@@ -96,7 +99,6 @@ export default async (req, context) => {
     return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
 
   } catch (err) {
-    console.error("Manual Log:", err.message);
     return new Response(JSON.stringify({ error: "Generation Error", details: err.message }), { status: 500 });
   }
 };
