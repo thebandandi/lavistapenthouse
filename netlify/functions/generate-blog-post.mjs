@@ -21,20 +21,17 @@ export default async (req, context) => {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
-    // ⚡ OPTIMIZED PROMPT: Clearer instructions to prevent AI "looping"
+    // ⚡ FASTER, SIMPLER SEARCH
     const aiResponse = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `Summarize 2-3 events for late April/May 2026 from https://www.visitloscabos.travel/events/. 
-            Write a high-end bilingual blog for 'La Vista Penthouse'. 
-            Include this CTA at the end of both English/Spanish:
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="https://lavistapenthouse.com/#booking-widget" style="background-color: #1a3a4a; color: #c9a84c; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Check Availability</a>
-              <p style="font-size: 14px; margin-top: 15px; color: #6b6b6b;">After booking, contact hosts for event reservation assistance.</p>
-            </div>
+            text: `Search for 2-3 luxury events in Cabo for May 2026. 
+            Use information from https://www.visitloscabos.travel/events/
+            Write a bilingual blog post for 'La Vista Penthouse'. 
+            Include the 'Check Availability' button linking to https://lavistapenthouse.com/#booking-widget.
             End with: SEARCH_TERM: [one word]`
           }]
         }],
@@ -44,14 +41,32 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
+    // 🛡️ RECOVERY: If the search failed, we generate a high-end "General Cabo" post 
+    // so you NEVER get an error screen again.
+    let fullText;
     if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("The tourism site is responding slowly. Please wait 30 seconds and try one more time.");
+      console.log("Web search timed out, falling back to general luxury content...");
+      const fallbackRes = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: "The web search timed out. Instead, write a general luxury 'May in Cabo' guide for La Vista Penthouse. Focus on the Art Walk and Marina dining. Include the same CTA and SEARCH_TERM format."
+            }]
+          }]
+        })
+      });
+      const fallbackData = await fallbackRes.json();
+      fullText = fallbackData.candidates[0].content.parts[0].text;
+    } else {
+      fullText = data.candidates[0].content.parts[0].text;
     }
 
-    const fullText = data.candidates[0].content.parts[0].text;
     const [blogBody, searchTermRaw] = fullText.split('SEARCH_TERM:');
     let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo";
 
+    // Pexels Image Fetch
     let displayImage = "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg";
     if (pexelsKey) {
         const pexelsRes = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(searchTerm)}&per_page=1`, {
@@ -75,9 +90,9 @@ export default async (req, context) => {
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success", image: displayImage }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Generation Timeout", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Generation Failed", details: err.message }), { status: 500 });
   }
 };
