@@ -21,48 +21,52 @@ export default async (req, context) => {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
-    // 🧠 THE HIGH-END PROMPT
     const luxuryPrompt = `
-      ACT AS: An expert luxury travel concierge for 'La Vista Penthouse' in Cabo.
+      ACT AS: An expert luxury travel concierge for 'La Vista Penthouse'.
       TASK: Write an extensive, sophisticated blog post about luxury events in Cabo for May 2026.
-      DETAILS: Focus on Los Cabos Fashion Week, the Mandapa x Zadún culinary takeover, and Sunset Fest. 
-      STYLE: Ritz-Carlton/Luxury Magazine tone.
+      DETAILS: Deep research https://www.visitloscabos.travel/events/ for Fashion Week, the Mandapa culinary takeover, and Sunset Fest.
+      STYLE: Ritz-Carlton/Luxury Magazine tone. High-end storytelling.
       FORMAT: Full English version, then '## En Español' version.
       CTA: Include the HTML button for https://lavistapenthouse.com/#booking-widget at the end of both sections.
       End with: SEARCH_TERM: [one keyword]
     `;
 
-    // ⚡ TRY DEEP SEARCH FIRST
+    // 1. ATTEMPT DEEP SEARCH
     let aiResponse = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: "RESEARCH AND WRITE: " + luxuryPrompt }] }],
+        contents: [{ parts: [{ text: "SEARCH AND WRITE: " + luxuryPrompt }] }],
         tools: [{ "google_search": {} }]
       })
     });
 
     let data = await aiResponse.json();
+    
+    // 🛡️ DEFENSIVE READING: Using Optional Chaining (?.) to prevent "reading '0'" errors
+    let fullText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    // 🛡️ RECOVERY LOGIC: If search fails or returns empty, run INSTANT GENERATION
-    let fullText;
-    if (!data.candidates || data.candidates.length === 0) {
-      console.warn("Search timed out. Switching to High-End Knowledge generation...");
+    // 2. FALLBACK: If Search failed or returned an error
+    if (!fullText) {
+      console.warn("Search Tool failed. Switching to internal knowledge...");
       const fallbackRes = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: "GENERATE FROM KNOWLEDGE: " + luxuryPrompt }] }]
+          contents: [{ parts: [{ text: "KNOWLEDGE GENERATION: " + luxuryPrompt }] }]
         })
       });
       const fallbackData = await fallbackRes.json();
-      fullText = fallbackData.candidates[0].content.parts[0].text;
-    } else {
-      fullText = data.candidates[0].content.parts[0].text;
+      fullText = fallbackData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
+    // 🛡️ FINAL SAFETY: If even the fallback fails
+    if (!fullText) {
+      throw new Error("Gemini API is currently unavailable. Please try again in 1 minute.");
     }
 
     const [blogBody, searchTermRaw] = fullText.split('SEARCH_TERM:');
-    let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo Luxury";
+    let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo";
 
     // 📸 Pexels Image Fetch
     let displayImage = "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg";
@@ -72,16 +76,17 @@ export default async (req, context) => {
         });
         if (pexelsRes.ok) {
             const pexelsData = await pexelsRes.json();
-            if (pexelsData.photos && pexelsData.photos.length > 0) {
+            if (pexelsData?.photos?.length > 0) {
                 displayImage = pexelsData.photos[0].src.large;
             }
         }
     }
 
+    // SAVE TO DATABASE
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
-      title: blogBody.split('\n')[0].replace(/#/g, '').trim(),
+      title: blogBody.split('\n')[0].replace(/#/g, '').trim() || "Cabo Luxury Update",
       content: blogBody.trim(),
       displayImage: displayImage,
       status: 'draft',
@@ -91,6 +96,7 @@ export default async (req, context) => {
     return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "System Error", details: err.message }), { status: 500 });
+    console.error("Manual Log:", err.message);
+    return new Response(JSON.stringify({ error: "Generation Error", details: err.message }), { status: 500 });
   }
 };
