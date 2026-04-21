@@ -19,7 +19,8 @@ export default async (req, context) => {
   }
 
   try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
+    // ⚡ Using the most stable 2026 model string
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -27,26 +28,7 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `
-              TASK: Write a luxury bilingual blog post for 'La Vista Penthouse' about late April/May in Cabo.
-              
-              CONTENT FOCUS:
-              - The sophisticated vibe of the San Jose Art Walk (Thursdays).
-              - Seasonal highlights like the fresh catch at the Marina or the upcoming Arte Culinaria festival.
-              - Mention the private rooftop jacuzzi at La Vista as the perfect way to end a day exploring both towns.
-
-              STRUCTURE: 
-              - English Title & Body.
-              - ## En Español section with Spanish Title & Body.
-
-              MANDATORY CTA: Wrap this HTML button at the end of BOTH sections:
-              <div style="text-align: center; margin: 40px 0;">
-                <a href="https://lavistapenthouse.com/#booking-widget" style="background-color: #1a3a4a; color: #c9a84c; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Check Availability & Book Direct</a>
-                <p style="font-size: 14px; margin-top: 15px; color: #6b6b6b;">Book direct to save 5%. After booking, contact hosts for event reservation assistance.</p>
-              </div>
-
-              End exactly with: SEARCH_TERM: [one word]
-            `
+            text: "Write a short bilingual blog post about visiting Cabo in May. English first, then Spanish. Include a call to action to book at La Vista Penthouse. End with SEARCH_TERM: [one word]"
           }]
         }]
       })
@@ -54,9 +36,13 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
-    // Safe reading of the response
-    if (!data.candidates || !data.candidates[0]) {
-      throw new Error("API returned no content. Please try again.");
+    // Debugging check
+    if (data.error) {
+       throw new Error(`Gemini API Error: ${data.error.message}`);
+    }
+
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error("Gemini returned an empty response. This is likely a safety filter or API key permission issue.");
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
@@ -90,6 +76,6 @@ export default async (req, context) => {
     return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Generation Failed", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "System Error", details: err.message }), { status: 500 });
   }
 };
