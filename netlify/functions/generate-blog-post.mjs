@@ -21,14 +21,14 @@ export default async (req, context) => {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
-    // 1. Initial attempt with Deep Research
+    // LAYER 1: The Request
     const aiResponse = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Research events in Los Cabos via https://www.visitloscabos.travel/events/ for May 2026. Write a luxury bilingual blog post for 'La Vista Penthouse'. Include the CTA button and end with SEARCH_TERM: [one word]."
+            text: "Search for luxury events in Cabo for the next 30 days at https://www.visitloscabos.travel/events/. Write a high-end bilingual blog for 'La Vista Penthouse'. Include the booking CTA button and end with SEARCH_TERM: [one word]."
           }]
         }],
         tools: [{ "google_search": {} }]
@@ -37,32 +37,39 @@ export default async (req, context) => {
 
     const data = await aiResponse.json();
 
-    // 🛡️ THE FIX: Check if the response actually contains a post
-    let fullText;
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+    // LAYER 2: The "Ghost Response" Protection
+    // We check every single step of the data path before touching it.
+    let fullText = "";
+    if (data && data.candidates && data.candidates.length > 0 && 
+        data.candidates[0].content && data.candidates[0].content.parts && 
+        data.candidates[0].content.parts.length > 0) {
+        
         fullText = data.candidates[0].content.parts[0].text;
-    } else {
-        // 🔄 FALLBACK: If the search failed/timed out, generate a high-quality general post
-        console.warn("Search tool returned empty, switching to fallback content.");
-        const fallbackRes = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: "The web search timed out. Instead, write a high-end luxury guide about 'Spring in Cabo' for La Vista Penthouse. Focus on rooftop relaxation and local dining. Include the same CTA button and SEARCH_TERM format."
-              }]
+    } 
+
+    // LAYER 3: The Fallback (If Gemini failed to search)
+    if (!fullText || fullText.length < 10) {
+      console.warn("Gemini Search failed or returned empty. Running Fallback...");
+      const fallbackRes = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: "The web search was slow. Please write a luxury 'Welcome to Spring in Cabo' blog for La Vista Penthouse. Focus on the Art Walk and Marina. Include the standard booking CTA and SEARCH_TERM: [one word]."
             }]
-          })
-        });
-        const fallbackData = await fallbackRes.json();
-        fullText = fallbackData.candidates[0].content.parts[0].text;
+          }]
+        })
+      });
+      const fallbackData = await fallbackRes.json();
+      fullText = fallbackData.candidates[0].content.parts[0].text;
     }
 
+    // Process the final text
     const [blogBody, searchTermRaw] = fullText.split('SEARCH_TERM:');
     let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo";
 
-    // 📸 Pexels Image Fetch
+    // Pexels Image Fetch
     let displayImage = "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg";
     if (pexelsKey) {
         const pexelsRes = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(searchTerm)}&per_page=1`, {
@@ -76,6 +83,7 @@ export default async (req, context) => {
         }
     }
 
+    // Save to database
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
@@ -86,9 +94,10 @@ export default async (req, context) => {
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success", mode: data.candidates ? "Search" : "Fallback" }), { status: 200 });
 
   } catch (err) {
+    console.error("Critical System Error:", err.message);
     return new Response(JSON.stringify({ error: "System Error", details: err.message }), { status: 500 });
   }
 };
