@@ -19,8 +19,8 @@ export default async (req, context) => {
   }
 
   try {
-    // ⚡ Using the most stable 2026 model string
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`;
+    // ⚡ Using the high-performance 2.5-flash model with search enabled
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
       method: "POST",
@@ -28,21 +28,27 @@ export default async (req, context) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: "Write a short bilingual blog post about visiting Cabo in May. English first, then Spanish. Include a call to action to book at La Vista Penthouse. End with SEARCH_TERM: [one word]"
+            text: `
+              1. Research events in Los Cabos (San Lucas & San Jose) for the next 30 days via https://www.visitloscabos.travel/events/
+              2. Write a high-end bilingual blog post for 'La Vista Penthouse'.
+              3. MANDATORY CTA: At the end of BOTH the English and Spanish sections, include this HTML:
+                 <div style="text-align: center; margin: 40px 0;">
+                   <a href="https://lavistapenthouse.com/#booking-widget" style="background-color: #1a3a4a; color: #c9a84c; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">Check Availability & Book Direct</a>
+                   <p style="font-size: 14px; margin-top: 15px; color: #6b6b6b;">Book direct to save 5%. After booking, contact hosts for event reservation assistance.</p>
+                 </div>
+              4. End exactly with: SEARCH_TERM: [one word]
+            `
           }]
-        }]
+        }],
+        tools: [{ "google_search": {} }]
       })
     });
 
     const data = await aiResponse.json();
 
-    // Debugging check
-    if (data.error) {
-       throw new Error(`Gemini API Error: ${data.error.message}`);
-    }
-
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error("Gemini returned an empty response. This is likely a safety filter or API key permission issue.");
+    // 🛡️ PROTECTION: If Gemini returns an empty candidate list, we catch it here
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("Search timed out or returned no data. Please try one more time.");
     }
 
     const fullText = data.candidates[0].content.parts[0].text;
@@ -76,6 +82,6 @@ export default async (req, context) => {
     return new Response(JSON.stringify({ message: "Success" }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "System Error", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Generation Snag", details: err.message }), { status: 500 });
   }
 };
