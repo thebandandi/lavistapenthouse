@@ -1,6 +1,5 @@
 import { getStore } from "@netlify/blobs";
 
-// This tells Netlify to wake up every Sunday at midnight
 export const config = {
   schedule: "0 0 * * 0" 
 };
@@ -8,12 +7,10 @@ export const config = {
 export default async (req, context) => {
   const store = getStore("blog-posts");
   const url = new URL(req.url);
-  
   const passwordHeader = process.env.BLOG_ADMIN_PASSWORD;
   const geminiKey = process.env.GEMINI_API_KEY;
   const pexelsKey = process.env.PEXELS_API_KEY;
 
-  // SECURITY: Allow if triggered by Netlify Schedule OR if valid password in URL
   const isScheduled = req.headers.get("x-netlify-event") === "schedule";
   const hasValidPassword = url.searchParams.get("password") === passwordHeader;
 
@@ -22,8 +19,6 @@ export default async (req, context) => {
   }
 
   try {
-    if (!geminiKey) return new Response("Error: GEMINI_API_KEY missing", { status: 500 });
-
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey.trim()}`;
     
     const aiResponse = await fetch(endpoint, {
@@ -34,13 +29,16 @@ export default async (req, context) => {
           parts: [{
             text: `
               INSTRUCTIONS:
-              1. First, visit the official Los Cabos Tourism Calendar at https://www.visitloscabos.travel/events/
-              2. Identify the most exciting luxury, cultural, or culinary events happening in BOTH Cabo San Lucas and San Jose del Cabo for the upcoming week.
-              3. Write a high-end, bilingual blog post for 'La Vista Penthouse'. 
-              4. TONE: Sophisticated, inviting, and knowledgeable.
-              5. STRUCTURE: English Title, English Body, ## En Español, Spanish Body.
-              6. CALL TO ACTION: At the end of both the English and Spanish sections, include a note inviting readers to book their stay at La Vista Penthouse. Add that after booking, guests should reach out to the hosts for assistance in making reservations for any specific events they are interested in.
-              7. DATA FORMAT: End the entire response with exactly: SEARCH_TERM: [one specific word for a photo of Cabo luxury]
+              1. Research events in Los Cabos (San Lucas & San Jose) for the next 30 days.
+              2. Visit https://www.visitloscabos.travel/events/ AND search for:
+                 - San Jose del Cabo Art Walk (Every Thursday thru June)
+                 - Wine and Music Night (San Jose, April 25)
+                 - Arte Culinaria Festival at Montage (May 22-25)
+                 - Sportfishing tournaments in the Marina.
+              3. Write a high-end bilingual blog post for 'La Vista Penthouse'. 
+                 - Focus on 2-3 events ranging from 'this week' to 'coming up this month'.
+              4. Include the MANDATORY CTA: 'Book your stay at La Vista Penthouse. After booking, reach out to hosts for event reservation assistance.' (Include in Spanish too).
+              5. End with: SEARCH_TERM: [one word for a photo]
             `
           }]
         }],
@@ -49,14 +47,17 @@ export default async (req, context) => {
     });
 
     const data = await aiResponse.json();
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error("Gemini returned no content. The search might have timed out.");
+    }
+
     const fullText = data.candidates[0].content.parts[0].text;
     const [blogBody, searchTermRaw] = fullText.split('SEARCH_TERM:');
-    
-    // Clean up search term for Pexels
     let searchTerm = searchTermRaw ? searchTermRaw.trim().replace(/[\[\]]/g, '').split(' ')[0] : "Cabo";
 
-    // 📸 PEXELS IMAGE FETCH
-    let displayImage = "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg"; // High-end fallback
+    // Pexels Image Fetch
+    let displayImage = "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg";
     if (pexelsKey) {
         const pexelsRes = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(searchTerm)}&per_page=1`, {
             headers: { "Authorization": pexelsKey.trim() }
@@ -69,7 +70,6 @@ export default async (req, context) => {
         }
     }
 
-    // 💾 SAVE TO DATABASE (LANDS IN DRAFTS)
     const postId = `post-${Date.now()}`;
     await store.set(postId, JSON.stringify({
       id: postId,
@@ -80,13 +80,9 @@ export default async (req, context) => {
       date: new Date().toISOString()
     }));
 
-    return new Response(JSON.stringify({ 
-        message: "Success", 
-        image: displayImage,
-        context: isScheduled ? "Automated Sunday Run" : "Manual Generation"
-    }), { status: 200 });
+    return new Response(JSON.stringify({ message: "Success", image: displayImage }), { status: 200 });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Server Error", details: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Generation Failed", details: err.message }), { status: 500 });
   }
 };
