@@ -2586,5 +2586,18 @@ const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isInte
 document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
 
 </script>
+<div style="background: white; padding: 50px; border: 5px solid red; text-align: center; position: relative; z-index: 9999;">
+  <h2>Control Tower Force Sync</h2>
+  <p>Click the button below to force Netlify to create your database.</p>
+  <form name="contact" data-netlify="true" method="POST">
+    <input type="hidden" name="form-name" value="contact">
+    <input type="text" name="name" value="Sync Tester" hidden>
+    <input type="email" name="email" value="sync@test.com" hidden>
+    <textarea name="message" hidden>Force sync request</textarea>
+    <button type="submit" style="padding: 20px 40px; background: red; color: white; font-weight: bold; cursor: pointer;">
+      CLICK TO ACTIVATE FORMS
+    </button>
+  </form>
+</div>
 </body>
 </html>
