@@ -1639,7 +1639,15 @@
   <p style="font-size:12px;">© 2026 La Vista Penthouse. All rights reserved.</p>
 
 </footer>
-
+<form name="contact" data-netlify="true" hidden>
+  <input type="text" name="name">
+  <input type="email" name="email">
+  <input type="tel" name="phone">
+  <input type="text" name="location">
+  <input type="text" name="referral">
+  <input type="text" name="dates">
+  <textarea name="message"></textarea>
+</form>
 
 
 <script>
@@ -2308,7 +2316,7 @@ async function sendMessage() {
 
   try {
     // 3. The Netlify "Handshake"
-    const res = await fetch("/", {
+    const res = await fetch("/index.html", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -2578,15 +2586,5 @@ const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isInte
 document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
 
 </script>
-<form name="contact" data-netlify="true" hidden>
-  <input type="text" name="name">
-  <input type="email" name="email">
-  <input type="tel" name="phone">
-  <input type="text" name="location">
-  <input type="text" name="referral">
-  <input type="text" name="dates">
-  <textarea name="message"></textarea>
-</form>
 </body>
-
 </html>
