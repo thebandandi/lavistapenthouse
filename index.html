@@ -2296,13 +2296,9 @@ async function sendMessage() {
   const dates    = document.getElementById('msg-dates').value.trim();
   const message  = document.getElementById('msg-body').value.trim();
 
-  // 2. Validation
+  // 2. Validation: Ensure required fields are present
   if (!name || !email || !message) { 
     showToast('Please fill in name, email, and message', 'error'); 
-    return; 
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
-    showToast('Please enter a valid email', 'error'); 
     return; 
   }
 
@@ -2311,12 +2307,12 @@ async function sendMessage() {
   btn.innerHTML = '<div class="spinner"></div> Sending...';
 
   try {
-    // 3. The Netlify "Handshake" (Sending as URLSearchParams)
+    // 3. The Netlify "Handshake"
     const res = await fetch("/", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        "form-name": "contact", // This tells Netlify which form to save to
+        "form-name": "contact", // This MUST match the name in your HTML
         "name": name,
         "email": email,
         "phone": phone || 'Not provided',
@@ -2346,7 +2342,6 @@ async function sendMessage() {
     btn.innerHTML = 'Send message';
   }
 }
-
 
 // =================== CALENDAR ===================
 
