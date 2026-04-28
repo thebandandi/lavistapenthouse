@@ -1984,7 +1984,7 @@ function onDateChange() {
 
   document.getElementById('pay-total').textContent=`· $${total}`;
 
-  bookingData={checkin:ci,checkout:co,nights,total,nightly,service,guests:document.getElementById('guests-display').textContent};
+  bookingData={checkin:ci,checkout:co,nights,total,nightly,guests:document.getElementById('guests-display').textContent};
 
   calCheckIn=ci; calCheckOut=co; renderCalendar();
 
@@ -2312,12 +2312,12 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        "form-name": "contact", // This MUST match the name in your HTML
+        "form-name": "contact",
         "name": name,
         "email": email,
         "phone": phone || 'Not provided',
-        "location": location || 'Not provided',
-        "referral": referral,
+        "location": location || 'Not provided', // Ensure this matches name="location" in HTML
+        "referral": referral,                 // Ensure this matches name="referral" in HTML
         "dates": dates || 'Not specified',
         "message": message
       }).toString()
@@ -2578,7 +2578,15 @@ const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isInte
 document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
 
 </script>
-
+<form name="contact" data-netlify="true" hidden>
+  <input type="text" name="name">
+  <input type="email" name="email">
+  <input type="tel" name="phone">
+  <input type="text" name="location">
+  <input type="text" name="referral">
+  <input type="text" name="dates">
+  <textarea name="message"></textarea>
+</form>
 </body>
 
 </html>
