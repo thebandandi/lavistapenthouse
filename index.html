@@ -1496,64 +1496,64 @@
 
 </div>
 
-
-
-<!-- MESSAGE HOST (Formspree) -->
-
+ <!-- MESSAGE HOST (Netlify) --> 
 <div class="modal-overlay" id="messageModal" onclick="closeModal('messageModal',event)">
-
   <div class="modal">
-
     <h3>Message Jaday & Elihu</h3>
-
     <p>Have a question? Send a message and they'll reply within 24 hours.</p>
-
-    <div class="modal-form" id="contact-form">
-
-      <div class="form-group"><label class="field-label">Your name *</label><input type="text" id="msg-name" placeholder="First & last name"></div>
-
-      <div class="form-group"><label class="field-label">Email address *</label><input type="email" id="msg-email" placeholder="you@example.com"></div>
+    
+    <div class="modal-form" id="contact-form" data-netlify="true" name="contact">
+      <input type="hidden" name="form-name" value="contact">
 
       <div class="form-group">
-  <label class="field-label">Phone Number (Optional)</label>
-  <input type="tel" id="msg-phone" placeholder="+1 (555) 000-0000">
-</div>
+        <label class="field-label">Your name *</label>
+        <input type="text" id="msg-name" name="name" placeholder="First & last name">
+      </div>
 
-<div class="form-group">
-  <label class="field-label">Traveling From (Optional)</label>
-  <input type="text" id="msg-location" placeholder="e.g. Denver, CO">
-</div>
+      <div class="form-group">
+        <label class="field-label">Email address *</label>
+        <input type="email" id="msg-email" name="email" placeholder="you@example.com">
+      </div>
 
-<div class="form-group">
-  <label class="field-label">How did you hear about us? (Optional)</label>
-  <select id="msg-referral">
-    <option value="Direct/Search">Search Engine / Direct</option>
-    <option value="Social Media">Social Media</option>
-    <option value="Friend/Family">Friend or Family Referral</option>
-    <option value="Returning Guest">I am a returning guest</option>
-    <option value="Other">Other</option>
-  </select>
-</div>
-      <div class="form-group"><label class="field-label">Travel dates (optional)</label><input type="text" id="msg-dates" placeholder="e.g. April 10–15, 2026"></div>
+      <div class="form-group">
+        <label class="field-label">Phone Number (Optional)</label>
+        <input type="tel" id="msg-phone" name="phone" placeholder="+1 (555) 000-0000">
+      </div>
 
-      <div class="form-group"><label class="field-label">Message *</label><textarea id="msg-body" placeholder="Ask about the property, availability, activities..."></textarea></div>
+      <div class="form-group">
+        <label class="field-label">Traveling From (Optional)</label>
+        <input type="text" id="msg-location" name="location" placeholder="e.g. Denver, CO">
+      </div>
 
+      <div class="form-group">
+        <label class="field-label">How did you hear about us? (Optional)</label>
+        <select id="msg-referral" name="referral">
+          <option value="Direct/Search">Search Engine / Direct</option>
+          <option value="Social Media">Social Media</option>
+          <option value="Friend/Family">Friend or Family Referral</option>
+          <option value="Returning Guest">I am a returning guest</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label">Travel dates (optional)</label>
+        <input type="text" id="msg-dates" name="dates" placeholder="e.g. April 10–15, 2026">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label">Message *</label>
+        <textarea id="msg-body" name="message" placeholder="Ask about the property, availability, activities..."></textarea>
+      </div>
     </div>
 
     <div class="modal-actions">
-
       <button class="modal-cancel" onclick="closeModal('messageModal')">Cancel</button>
-
       <button class="modal-submit" id="msg-submit" onclick="sendMessage()">Send message</button>
-
     </div>
-
   </div>
-
 </div>
-
-
-
+  
 <!-- BOOKING MODAL (Stripe) -->
 
 <div class="modal-overlay" id="bookModal" onclick="closeModal('bookModal',event)">
@@ -2284,50 +2284,54 @@ function generateRef() {
 
 
 
-// =================== CONTACT FORM (Formspree) ===================
+// =================== CONTACT FORM (Netlify) ===================
 
 async function sendMessage() {
-  const name    = document.getElementById('msg-name').value.trim();
-  const email   = document.getElementById('msg-email').value.trim();
-  
-  // NEW: Grab the new CRM fields from the HTML
+  // 1. Grab all values from the form
+  const name     = document.getElementById('msg-name').value.trim();
+  const email    = document.getElementById('msg-email').value.trim();
   const phone    = document.getElementById('msg-phone').value.trim();
   const location = document.getElementById('msg-location').value.trim();
   const referral = document.getElementById('msg-referral').value;
+  const dates    = document.getElementById('msg-dates').value.trim();
+  const message  = document.getElementById('msg-body').value.trim();
 
-  const dates   = document.getElementById('msg-dates').value.trim();
-  const message = document.getElementById('msg-body').value.trim();
-
-  if (!name || !email || !message) { showToast('Please fill in all required fields', 'error'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Please enter a valid email', 'error'); return; }
+  // 2. Validation
+  if (!name || !email || !message) { 
+    showToast('Please fill in name, email, and message', 'error'); 
+    return; 
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
+    showToast('Please enter a valid email', 'error'); 
+    return; 
+  }
 
   const btn = document.getElementById('msg-submit');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Sending...';
 
   try {
-    const res = await fetch('https://formspree.io/f/xwvrnzkj', {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        email,
-        // NEW: Including the captured data in the submission
-        phone: phone || 'Not provided',
-        user_location: location || 'Not provided',
-        referral_source: referral,
-        dates: dates || 'Not specified',
-        message,
-        _subject: `New message from ${name} — La Vista Penthouse`,
-        _replyto: email,
-      })
+    // 3. The Netlify "Handshake" (Sending as URLSearchParams)
+    const res = await fetch("/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        "form-name": "contact", // This tells Netlify which form to save to
+        "name": name,
+        "email": email,
+        "phone": phone || 'Not provided',
+        "location": location || 'Not provided',
+        "referral": referral,
+        "dates": dates || 'Not specified',
+        "message": message
+      }).toString()
     });
 
     if (res.ok) {
       closeModal('messageModal');
-      showToast('✅ Message sent! Expect a reply within 24 hours.', 'success');
+      showToast('✅ Message sent! We will reply within 24 hours.', 'success');
       
-      // Updated clear list to include the new fields
+      // 4. Reset the form fields
       ['msg-name','msg-email','msg-phone','msg-location','msg-dates','msg-body'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
@@ -2342,7 +2346,6 @@ async function sendMessage() {
     btn.innerHTML = 'Send message';
   }
 }
-
 
 
 // =================== CALENDAR ===================
