@@ -1502,8 +1502,7 @@
     <h3>Message Jaday & Elihu</h3>
     <p>Have a question? Send a message and they'll reply within 24 hours.</p>
     
-    <div class="modal-form" id="contact-form" data-netlify="true" name="contact">
-      <input type="hidden" name="form-name" value="contact">
+    <input type="hidden" name="form-name" value="contact">
 
       <div class="form-group">
         <label class="field-label">Your name *</label>
@@ -1520,9 +1519,36 @@
         <input type="tel" id="msg-phone" name="phone" placeholder="+1 (555) 000-0000">
       </div>
 
-      <div class="form-group">
-        <label class="field-label">Traveling From (Optional)</label>
-        <input type="text" id="msg-location" name="location" placeholder="e.g. Denver, CO">
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="field-label">City & State</label>
+          <input type="text" id="msg-location" name="location" list="common-locations" placeholder="e.g. Denver, CO">
+          <datalist id="common-locations">
+            <option value="Denver, CO">
+            <option value="Boulder, CO">
+            <option value="Colorado Springs, CO">
+            <option value="Aspen, CO">
+            <option value="Los Angeles, CA">
+            <option value="San Diego, CA">
+            <option value="Phoenix, AZ">
+            <option value="Dallas, TX">
+            <option value="Seattle, WA">
+            <option value="Vancouver, BC">
+            <option value="Mexico City, MX">
+            <option value="Cabo San Lucas, MX">
+            <option value="Todos Santos, MX">
+            <option value="Pescadero, MX">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Country</label>
+          <select id="msg-country" name="country">
+            <option value="US">United States</option>
+            <option value="MX">Mexico</option>
+            <option value="CA">Canada</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1536,23 +1562,21 @@
         </select>
       </div>
 
-      <div class="form-group">
-        <label class="field-label">Travel dates (optional)</label>
-        <input type="text" id="msg-dates" name="dates" placeholder="e.g. April 10–15, 2026">
+      <div class="form-row-2">
+        <div class="form-group">
+          <label class="field-label">Check-in *</label>
+          <input type="date" id="msg-checkin" name="arrival">
+        </div>
+        <div class="form-group">
+          <label class="field-label">Check-out *</label>
+          <input type="date" id="msg-checkout" name="departure">
+        </div>
       </div>
 
       <div class="form-group">
         <label class="field-label">Message *</label>
         <textarea id="msg-body" name="message" placeholder="Ask about the property, availability, activities..."></textarea>
       </div>
-    </div>
-
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeModal('messageModal')">Cancel</button>
-      <button class="modal-submit" id="msg-submit" onclick="sendMessage()">Send message</button>
-    </div>
-  </div>
-</div>
   
 <!-- BOOKING MODAL (Stripe) -->
 
@@ -1639,13 +1663,16 @@
   <p style="font-size:12px;">© 2026 La Vista Penthouse. All rights reserved.</p>
 
 </footer>
+
 <form name="contact" data-netlify="true" hidden>
   <input type="text" name="name">
   <input type="email" name="email">
   <input type="tel" name="phone">
   <input type="text" name="location">
+  <input type="text" name="country">
+  <input type="date" name="arrival">
+  <input type="date" name="departure">
   <input type="text" name="referral">
-  <input type="text" name="dates">
   <textarea name="message"></textarea>
 </form>
 
@@ -2296,17 +2323,19 @@ function generateRef() {
 
 async function sendMessage() {
   // 1. Grab all values from the form
-  const name     = document.getElementById('msg-name').value.trim();
-  const email    = document.getElementById('msg-email').value.trim();
-  const phone    = document.getElementById('msg-phone').value.trim();
-  const location = document.getElementById('msg-location').value.trim();
-  const referral = document.getElementById('msg-referral').value;
-  const dates    = document.getElementById('msg-dates').value.trim();
-  const message  = document.getElementById('msg-body').value.trim();
+  const name      = document.getElementById('msg-name').value.trim();
+  const email     = document.getElementById('msg-email').value.trim();
+  const phone     = document.getElementById('msg-phone').value.trim();
+  const city      = document.getElementById('msg-location').value.trim();
+  const country   = document.getElementById('msg-country').value;
+  const arrival   = document.getElementById('msg-checkin').value;
+  const departure = document.getElementById('msg-checkout').value;
+  const referral  = document.getElementById('msg-referral').value;
+  const message   = document.getElementById('msg-body').value.trim();
 
   // 2. Validation: Ensure required fields are present
-  if (!name || !email || !message) { 
-    showToast('Please fill in name, email, and message', 'error'); 
+  if (!name || !email || !arrival || !departure || !message) { 
+    showToast('Please fill in name, email, dates, and message', 'error'); 
     return; 
   }
 
@@ -2324,9 +2353,11 @@ async function sendMessage() {
         "name": name,
         "email": email,
         "phone": phone || 'Not provided',
-        "location": location || 'Not provided', // Ensure this matches name="location" in HTML
-        "referral": referral,                 // Ensure this matches name="referral" in HTML
-        "dates": dates || 'Not specified',
+        "location": city || 'Not provided',
+        "country": country,
+        "arrival": arrival,
+        "departure": departure,
+        "referral": referral,
         "message": message
       }).toString()
     });
@@ -2336,7 +2367,7 @@ async function sendMessage() {
       showToast('✅ Message sent! We will reply within 24 hours.', 'success');
       
       // 4. Reset the form fields
-      ['msg-name','msg-email','msg-phone','msg-location','msg-dates','msg-body'].forEach(id => {
+      ['msg-name','msg-email','msg-phone','msg-location','msg-checkin','msg-checkout','msg-body'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
       });
@@ -2350,7 +2381,6 @@ async function sendMessage() {
     btn.innerHTML = 'Send message';
   }
 }
-
 // =================== CALENDAR ===================
 
 let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
@@ -2578,8 +2608,18 @@ function updateReviewStats(reviews) {
 
 
 // Init reviews on load
+document.addEventListener('DOMContentLoaded', () => { 
+  renderReviews(); 
 
-document.addEventListener('DOMContentLoaded', () => { renderReviews(); });
+  // --- Step 3: Date Safety Script ---
+  const today = new Date().toISOString().split('T')[0];
+  const checkinInput = document.getElementById('msg-checkin');
+  const checkoutInput = document.getElementById('msg-checkout');
+  
+  if(checkinInput) checkinInput.min = today;
+  if(checkoutInput) checkoutInput.min = today;
+  // ----------------------------------
+});
 
 const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:.1});
 
