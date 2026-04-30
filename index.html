@@ -1502,7 +1502,8 @@
     <h3>Message Jaday & Elihu</h3>
     <p>Have a question? Send a message and they'll reply within 24 hours.</p>
     
-    <input type="hidden" name="form-name" value="contact">
+    <div class="modal-form">
+      <input type="hidden" name="form-name" value="contact">
 
       <div class="form-group">
         <label class="field-label">Your name *</label>
@@ -1577,69 +1578,39 @@
         <label class="field-label">Message *</label>
         <textarea id="msg-body" name="message" placeholder="Ask about the property, availability, activities..."></textarea>
       </div>
-  
-<!-- BOOKING MODAL (Stripe) -->
-
-<div class="modal-overlay" id="bookModal" onclick="closeModal('bookModal',event)">
-
+    </div> <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('messageModal')">Cancel</button>
+      <button class="modal-submit" id="msg-submit" onclick="sendMessage()">Send message</button>
+    </div>
+  <!-- Booking Modal (Stripe) --> 
+  </div> </div> <div class="modal-overlay" id="bookModal" onclick="closeModal('bookModal',event)">
   <div class="modal" id="book-modal-content">
-
     <h3>Complete your reservation</h3>
-
     <p id="book-summary">You're one step away from booking La Vista Penthouse.</p>
-
     <div class="modal-form">
-
       <div class="form-row-2">
-
         <div class="form-group"><label class="field-label">First name *</label><input type="text" id="book-first" placeholder="First name"></div>
-
         <div class="form-group"><label class="field-label">Last name *</label><input type="text" id="book-last" placeholder="Last name"></div>
-
       </div>
-
       <div class="form-group"><label class="field-label">Email address *</label><input type="email" id="book-email" placeholder="you@example.com"></div>
-
       <div class="form-group"><label class="field-label">Phone number *</label><input type="tel" id="book-phone" placeholder="+1 (555) 000-0000"></div>
-
       <div class="form-group"><label class="field-label">Special requests (optional)</label><textarea id="book-requests" placeholder="Dietary needs, arrival time, celebrations..." style="min-height:70px;"></textarea></div>
-
       <div id="stripe-card-element" style="border:1.5px solid var(--border);border-radius:8px;padding:14px 16px;background:var(--warm-white);">
-
-        <!-- Stripe Card Element mounts here -->
-
         <div style="font-size:13px;color:var(--muted);">🔒 Card details will be collected securely by Stripe when you click "Confirm & Pay"</div>
-
       </div>
-
       <div id="card-errors" style="color:var(--error);font-size:12px;display:none;"></div>
-
     </div>
-
     <div class="modal-actions">
-
       <button class="modal-cancel" onclick="closeModal('bookModal')">Back</button>
-
       <button class="modal-submit" id="pay-btn" onclick="initiateStripeCheckout()">
-
         Confirm & Pay <span id="pay-total"></span>
-
       </button>
-
     </div>
-
     <div class="stripe-badge" style="margin-top:12px;">🔒 Payment secured by Stripe. We never store your card details.</div>
-
   </div>
-
 </div>
 
-
-
-
-
 <div class="toast" id="toast"></div>
-
 
 
 <footer>
