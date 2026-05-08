@@ -1,28 +1,46 @@
-// This function will eventually hook into your PM's software or an Airbnb scraper
-// For now, it provides the secure bridge to Stripe
-export async function handler(event) {
-  const { checkIn, checkOut } = JSON.parse(event.body);
+export const handler = async (event) => {
+  if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
 
-  // STRATEGY: 
-  // 1. Fetch current 'Master' rate from a Netlify Blob or simple scraping logic
-  // 2. For now, we use a 'Dynamic Base' that you can update in one place (.env)
-  const baseRate = parseFloat(process.env.AIRBNB_MASTER_RATE || 550);
-  
-  // Calculate nights
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
-  const nights = (end - start) / (1000 * 60 * 60 * 24);
+  try {
+    const { checkIn, checkOut } = JSON.parse(event.body);
+    
+    // --- AIRBNB / DPGO INTEGRATION POINT ---
+    // Currently, we are setting this to null to simulate a "Price not found" 
+    // or as a placeholder until your PM sets up the sync.
+    let airbnbNightlyRate = null; 
 
-  // Apply "Direct Discount" logic (e.g., 5% off Airbnb)
-  const directRate = baseRate * 0.95;
-  const total = directRate * nights;
+    // TODO: Insert your Airbnb Scraper or PMS API call here
+    // Example: airbnbNightlyRate = await fetchAirbnbPrice(checkIn);
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      total: total.toFixed(2),
-      rate: directRate.toFixed(2),
-      nights: nights
-    })
-  };
-}
+    if (!airbnbNightlyRate) {
+      // Logic: No price found = Inquiry Mode
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ mode: "INQUIRY", message: "Contact for Pricing" })
+      };
+    }
+
+    // --- IF PRICE EXISTS, PROCEED WITH INSTANT BOOK LOGIC ---
+    const CLEANING_FEE = 75;
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const nights = Math.round((end - start) / 86400000);
+    
+    const subtotal = airbnbNightlyRate * nights;
+    const discount = Math.round(subtotal * 0.05);
+    const finalTotal = subtotal + CLEANING_FEE - discount;
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        mode: "BOOK",
+        rate: airbnbNightlyRate,
+        total: finalTotal,
+        nights: nights
+      })
+    };
+  } catch (error) {
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  }
+};
+
