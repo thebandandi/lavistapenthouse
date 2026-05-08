@@ -242,9 +242,8 @@
 
 
 
-    // ── Pricing ─────────────────────────────────────────────────────────────
-
-    NIGHTLY_RATE:           350,
+// ── Pricing (Managed via Netlify Functions) ─────────────────────────────
+// The rate is now fetched dynamically to ensure parity with Airbnb/DPGO
 
     CLEANING_FEE:           75,
 
@@ -1414,7 +1413,7 @@
 
       <div class="avail-status" id="avail-status"></div>
 
-      <button class="book-btn" id="book-btn" onclick="handleBook()">Check availability</button>
+      <button class="book-btn" id="book-btn" onclick="handleBook()" disabled>Check availability</button>
 
       <div class="no-charge-note">You won't be charged yet</div>
 
@@ -1926,106 +1925,56 @@ function rangeHasBooked(ci, co) {
 
 // =================== BOOKING WIDGET ===================
 
-let bookingData = {};
-
-
-
-function onDateChange() {
-
-  const ci=document.getElementById('checkin-input').value;
-
-  const co=document.getElementById('checkout-input').value;
-
-  const status=document.getElementById('avail-status');
-
-  if(!ci||!co){status.style.display='none';return;}
-
-  const d1=new Date(ci),d2=new Date(co);
-
-  if(d2<=d1){showToast('Checkout must be after check-in','error');status.style.display='none';return;}
-
-  const nights=Math.round((d2-d1)/86400000);
-
-  if(nights<CONFIG.MIN_NIGHTS){showToast(`Minimum ${CONFIG.MIN_NIGHTS} night stay`,'info');status.style.display='none';return;}
-
-  if(rangeHasBooked(ci,co)){
-
-    status.className='avail-status unavailable';
-
-    status.textContent='❌ Some dates in this range are unavailable. Please adjust.';
-
-    document.getElementById('book-btn').textContent='Check availability';
-
-    document.getElementById('price-breakdown').style.display='none';
-
-    calCheckIn=ci; calCheckOut=co; renderCalendar();
-
-    return;
-
-  }
-
-  status.className='avail-status available';
-
-  status.textContent='✅ These dates are available!';
-
-  const nightly=CONFIG.NIGHTLY_RATE*nights;
-
-  const discount = Math.round(nightly * 0.05);
-
-  const total = nightly + CONFIG.CLEANING_FEE - discount;
-
-  document.getElementById('nightly-label').textContent = `$${CONFIG.NIGHTLY_RATE} × ${nights} night${nights!==1?'s':''}`;
-
-  document.getElementById('nightly-total').textContent = `$${nightly}`;
-
-  document.getElementById('discount-row').style.display = 'flex';
-
-  document.getElementById('discount-amount').textContent = `-$${discount}`;
-
-  document.getElementById('grand-total').textContent = `$${total}`;
-
-  document.getElementById('price-breakdown').style.display='block';
-
-  document.getElementById('book-btn').textContent='Reserve';
-
-  document.getElementById('pay-total').textContent=`· $${total}`;
-
-  bookingData={checkin:ci,checkout:co,nights,total,nightly,guests:document.getElementById('guests-display').textContent};
-
-  calCheckIn=ci; calCheckOut=co; renderCalendar();
-
-}
-
-
-
 function handleBook() {
-
-  const ci=document.getElementById('checkin-input').value;
-
-  const co=document.getElementById('checkout-input').value;
-
-  if(!ci||!co){showToast('Please select your dates first','info');return;}
-
-  if(rangeHasBooked(ci,co)){showToast('Some dates unavailable — please adjust','error');return;}
-
-  const d1=new Date(ci),d2=new Date(co);
-
-  const nights=Math.round((d2-d1)/86400000);
-
-  document.getElementById('book-summary').textContent=`${nights} night${nights!==1?'s':''} · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${document.getElementById('guests-display').textContent} · Total: $${document.getElementById('grand-total').textContent} (incl. 5% direct booking discount)`;
-
+  const ci = document.getElementById('checkin-input').value;
+  const co = document.getElementById('checkout-input').value;
+  if (!ci || !co || !bookingData.total) { showToast('Please select your dates first', 'info'); return; }
+  
+  const d1 = new Date(ci), d2 = new Date(co);
+  
+  // Use the total from the API call
+  document.getElementById('book-summary').textContent = `${bookingData.nights} night${bookingData.nights !== 1 ? 's' : ''} · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total} (Direct Discount Included)`;
+  
   document.getElementById('bookModal').classList.add('open');
-
 }
 
+  // --- START OF DYNAMIC PRICE FETCH ---
+  status.className = 'avail-status info';
+  status.textContent = 'Calculating direct-booking rate...';
+  bookBtn.disabled = true;
 
+  try {
+    const response = await fetch('/api/get-price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checkIn: ci, checkOut: co })
+    });
 
-function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+    const data = await response.json();
 
-function scrollToBooking() { document.getElementById('booking-widget').scrollIntoView({behavior:'smooth',block:'center'}); }
+    if (response.ok) {
+      status.className = 'avail-status available';
+      status.textContent = '✅ These dates are available!';
+      
+      document.getElementById('nightly-label').textContent = `$${data.rate} × ${nights} night${nights !== 1 ? 's' : ''}`;
+      document.getElementById('nightly-total').textContent = `$${(data.rate * nights).toFixed(0)}`;
+      document.getElementById('discount-row').style.display = 'flex';
+      document.getElementById('discount-amount').textContent = `-$${data.discountTotal}`;
+      document.getElementById('grand-total').textContent = `$${data.total}`;
+      
+      priceBreakdown.style.display = 'block';
+      bookBtn.textContent = 'Reserve';
+      bookBtn.disabled = false;
+      document.getElementById('pay-total').textContent = `· $${data.total}`;
 
-
-
+      // Store the secure data for the modal/Stripe
+      bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
+    }
+  } catch (err) {
+    status.textContent = '⚠️ Error fetching rates. Try again.';
+    console.error(err);
+  }
+}
 // =================== STRIPE CHECKOUT ===================
 
 async function initiateStripeCheckout() {
