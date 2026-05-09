@@ -666,9 +666,20 @@
 
   .booking-widget { position:sticky; top:88px; border:1px solid var(--border); border-radius:20px; padding:32px; background:var(--card-bg); box-shadow:0 8px 48px rgba(0,0,0,.08); }
 
-  .price-line .price { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:500; color:var(--deep-ocean); }
+.price-line .price { 
+  font-family:'Cormorant Garamond',serif; 
+  font-size: 28px; 
+  font-weight: 500; 
+  color: var(--deep-ocean); 
+  display: block; /* Ensures "Inquire Here" has its own space */
+}
 
-  .price-line .per { font-size:15px; color:var(--muted); }
+.price-line .per { 
+  font-size: 15px; 
+  color: var(--muted); 
+  display: block; /* Moves "for Best Rates" directly underneath */
+  margin-top: 2px;
+}
 
   .widget-rating { font-size:13px; color:var(--muted); display:flex; align-items:center; gap:6px; margin-bottom:16px; }
 
@@ -1362,7 +1373,10 @@
 
     <div class="booking-widget" id="booking-widget">
 
-      <div class="price-line"><span class="price"></span><span class="per"> / night</span></div>
+      <div class="price-line">
+  <span class="price">Inquire Here</span>
+  <span class="per">for Best Rates</span>
+</div>
 
       <div class="widget-rating">★ <strong>5.0</strong> · 5 reviews · <span class="guest-fav" style="font-size:11px;">Guest Favorite</span></div>
 
