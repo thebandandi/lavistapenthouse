@@ -244,7 +244,7 @@
 
     // ── Pricing ─────────────────────────────────────────────────────────────
 
-    NIGHTLY_RATE:           350,
+   
 
     CLEANING_FEE:           75,
 
@@ -1930,70 +1930,79 @@ let bookingData = {};
 
 
 
-function onDateChange() {
+async function onDateChange() {
+  const ci = document.getElementById('checkin-input').value;
+  const co = document.getElementById('checkout-input').value;
+  const status = document.getElementById('avail-status');
+  const priceBreakdown = document.getElementById('price-breakdown');
+  const bookBtn = document.getElementById('book-btn');
 
-  const ci=document.getElementById('checkin-input').value;
+  if (!ci || !co) { status.style.display = 'none'; return; }
 
-  const co=document.getElementById('checkout-input').value;
-
-  const status=document.getElementById('avail-status');
-
-  if(!ci||!co){status.style.display='none';return;}
-
-  const d1=new Date(ci),d2=new Date(co);
-
-  if(d2<=d1){showToast('Checkout must be after check-in','error');status.style.display='none';return;}
-
-  const nights=Math.round((d2-d1)/86400000);
-
-  if(nights<CONFIG.MIN_NIGHTS){showToast(`Minimum ${CONFIG.MIN_NIGHTS} night stay`,'info');status.style.display='none';return;}
-
-  if(rangeHasBooked(ci,co)){
-
-    status.className='avail-status unavailable';
-
-    status.textContent='❌ Some dates in this range are unavailable. Please adjust.';
-
-    document.getElementById('book-btn').textContent='Check availability';
-
-    document.getElementById('price-breakdown').style.display='none';
-
-    calCheckIn=ci; calCheckOut=co; renderCalendar();
-
-    return;
-
+  const d1 = new Date(ci), d2 = new Date(co);
+  if (d2 <= d1) { 
+    showToast('Checkout must be after check-in', 'error'); 
+    status.style.display = 'none'; 
+    return; 
   }
 
-  status.className='avail-status available';
+  const nights = Math.round((d2 - d1) / 86400000);
+  if (nights < CONFIG.MIN_NIGHTS) { 
+    showToast(`Minimum ${CONFIG.MIN_NIGHTS} night stay`, 'info'); 
+    status.style.display = 'none'; 
+    return; 
+  }
 
-  status.textContent='✅ These dates are available!';
+  if (rangeHasBooked(ci, co)) {
+    status.className = 'avail-status unavailable';
+    status.textContent = '❌ Some dates in this range are unavailable.';
+    bookBtn.textContent = 'Check availability';
+    priceBreakdown.style.display = 'none';
+    return;
+  }
 
-  const nightly=CONFIG.NIGHTLY_RATE*nights;
+  // Show "Thinking" state
+  status.className = 'avail-status info';
+  status.textContent = 'Fetching live direct-booking rates...';
+  bookBtn.disabled = true;
 
-  const discount = Math.round(nightly * 0.05);
+  try {
+    const response = await fetch('/.netlify/functions/get-price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checkIn: ci, checkOut: co })
+    });
 
-  const total = nightly + CONFIG.CLEANING_FEE - discount;
+    const data = await response.json();
 
-  document.getElementById('nightly-label').textContent = `$${CONFIG.NIGHTLY_RATE} × ${nights} night${nights!==1?'s':''}`;
-
-  document.getElementById('nightly-total').textContent = `$${nightly}`;
-
-  document.getElementById('discount-row').style.display = 'flex';
-
-  document.getElementById('discount-amount').textContent = `-$${discount}`;
-
-  document.getElementById('grand-total').textContent = `$${total}`;
-
-  document.getElementById('price-breakdown').style.display='block';
-
-  document.getElementById('book-btn').textContent='Reserve';
-
-  document.getElementById('pay-total').textContent=`· $${total}`;
-
-  bookingData={checkin:ci,checkout:co,nights,total,nightly,guests:document.getElementById('guests-display').textContent};
-
-  calCheckIn=ci; calCheckOut=co; renderCalendar();
-
+    if (data.mode === "BOOK") {
+      status.className = 'avail-status available';
+      status.textContent = '✅ Available! Direct discount applied.';
+      
+      document.getElementById('nightly-label').textContent = `$${data.rate} × ${nights} nights`;
+      document.getElementById('nightly-total').textContent = `$${(data.rate * nights)}`;
+      document.getElementById('discount-row').style.display = 'flex';
+      document.getElementById('discount-amount').textContent = `-$${data.discountTotal}`;
+      document.getElementById('grand-total').textContent = `$${data.total}`;
+      document.getElementById('pay-total').textContent = `· $${data.total}`;
+      
+      priceBreakdown.style.display = 'block';
+      bookBtn.textContent = 'Reserve';
+      bookBtn.disabled = false;
+      
+      bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
+    } else {
+      status.className = 'avail-status info';
+      status.textContent = 'Special rates apply for these dates.';
+      priceBreakdown.style.display = 'none';
+      bookBtn.textContent = 'Inquire for Rates';
+      bookBtn.disabled = false;
+      bookBtn.onclick = () => document.getElementById('contactModal').classList.add('open'); 
+    }
+  } catch (err) {
+    status.textContent = '⚠️ Connectivity error. Please try again.';
+    console.error(err);
+  }
 }
 
 
