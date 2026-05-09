@@ -1982,7 +1982,32 @@ function handleBook() {const btnText = document.getElementById('book-btn').textC
   }}
 // KEEP ALL YOUR sendMessage, MAKE.COM, AND SHEETS CODE BELOW THIS LINE
 
+// --- Modal Control Functions ---
+function openModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden'; // Prevents scrolling background
+  } else {
+    console.error("Could not find modal with ID:", id);
+  }
+}
 
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = 'auto'; // Re-enables scrolling
+  }
+}
+
+// Close modals if user clicks the dark background
+window.addEventListener('click', function(event) {
+  if (event.target.classList.contains('modal-overlay')) {
+    event.target.classList.remove('open');
+    document.body.style.overflow = 'auto';
+  }
+});
 
 // =================== STRIPE CHECKOUT ===================
 
