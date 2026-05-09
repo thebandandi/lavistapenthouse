@@ -2010,32 +2010,36 @@ async function onDateChange() {
 function handleBook() {
   const bookBtn = document.getElementById('book-btn');
   
-  // 1. If it's an Inquiry, open the form and fill in the dates
+  // 1. Handle Inquiry Mode
   if (bookBtn.textContent.includes("Inquire")) {
-    const checkin = document.getElementById('checkin-input').value;
-    const checkout = document.getElementById('checkout-input').value;
+    // Grab the dates the user selected in the widget
+    const ci = document.getElementById('checkin-input').value;
+    const co = document.getElementById('checkout-input').value;
 
-    // Prepopulate the contact form fields
-    if (checkin) document.getElementById('msg-checkin').value = checkin;
-    if (checkout) document.getElementById('msg-checkout').value = checkout;
+    // Pre-fill your contact form dates
+    if (ci) document.getElementById('msg-checkin').value = ci;
+    if (co) document.getElementById('msg-checkout').value = co;
 
-    // Open your specific modal (it's named messageModal in your code)
-    const modal = document.getElementById('messageModal');
-    if (modal) {
-      modal.classList.add('open');
+    // Use your site's native function to open the form
+    if (typeof openModal === "function") {
+      openModal('messageModal');
     } else {
-      // Fallback if the class 'open' isn't what your CSS uses
-      showToast('Opening contact form...', 'info');
-      document.getElementById('messageModal').style.display = 'block';
+      // Fallback in case openModal isn't global
+      document.getElementById('messageModal').classList.add('open');
     }
     return;
   }
 
-  // 2. Otherwise, proceed to the regular booking summary
+  // 2. Handle Reserve Mode (when price sync works)
   const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
   document.getElementById('book-summary').textContent = 
     `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
-  document.getElementById('bookModal').classList.add('open');
+  
+  if (typeof openModal === "function") {
+    openModal('bookModal');
+  } else {
+    document.getElementById('bookModal').classList.add('open');
+  }
 }
 
 
