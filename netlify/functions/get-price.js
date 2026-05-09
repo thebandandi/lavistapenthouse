@@ -1,74 +1,74 @@
 const axios = require('axios');
 
-export const handler = async (event) => {
-  // Only allow POST requests
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+exports.handler = async (event, context) => {
+  // This allows the function to be called from your website without CORS issues
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTION'
+  };
+
+  // Handle pre-flight requests from the browser
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers };
+  }
+
+  // Get dates from either URL parameters (GET) or Body (POST)
+  const checkIn = event.queryStringParameters.checkIn || (event.body && JSON.parse(event.body).checkIn);
+  const checkOut = event.queryStringParameters.checkOut || (event.body && JSON.parse(event.body).checkOut);
+
+  if (!checkIn || !checkOut) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({ error: 'Missing dates' })
+    };
   }
 
   try {
-    const { checkIn, checkOut } = JSON.parse(event.body);
-    const listingId = "1034347605075023527";
-    
-    // Construct the Airbnb URL for the specific stay dates
+    // REPLACE THIS with your actual Airbnb Room ID
+    const listingId = "YOUR_LISTING_ID"; 
     const url = `https://www.airbnb.com/rooms/${listingId}?check_in=${checkIn}&check_out=${checkOut}`;
 
-    // Fetch the page using "Stealth Headers" to look like a real browser
     const response = await axios.get(url, {
       headers: {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'accept-language': 'en-US,en;q=0.9',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'cache-control': 'no-cache',
-        'pragma': 'no-cache',
-        'referer': 'https://www.google.com/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'text/html'
       },
-      timeout: 8000 // Give it 8 seconds to respond
+      timeout: 8000 // 8 second timeout
     });
 
+    // AIRBNB SCRAPING LOGIC
+    // We look for the "price" inside the raw HTML
     const html = response.data;
-    
-    // Attempt to extract the nightly rate from Airbnb's internal data 
     const priceMatch = html.match(/"amount":(\d+),"amountFormatted":"\$(\d+)"/);
-    let airbnbRate = priceMatch ? parseInt(priceMatch[1]) : null;
 
-    // --- SAFETY CHECK ---
-    // If the price is missing (blocked or unavailable), switch to Inquiry mode
-    if (!airbnbRate || isNaN(airbnbRate)) {
-      console.log("Price not found or blocked by Airbnb. Switching to Inquiry mode.");
+    if (priceMatch) {
+      const nightlyPrice = parseInt(priceMatch[1]);
+      const d1 = new Date(checkIn);
+      const d2 = new Date(checkOut);
+      const nights = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+
       return {
         statusCode: 200,
-        body: JSON.stringify({ mode: "INQUIRY" })
+        headers,
+        body: JSON.stringify({
+          available: true,
+          nightlyPrice: nightlyPrice,
+          totalPrice: nightlyPrice * nights,
+          nights: nights
+        })
       };
     }
 
-    // --- CALCULATION LOGIC ---
-    const CLEANING_FEE = 75;
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
-    const nights = Math.round((end - start) / 86400000);
-    
-    const subtotal = airbnbRate * nights;
-    const discountTotal = Math.round(subtotal * 0.05); // 5% Direct Booking Discount
-    const finalTotal = subtotal + CLEANING_FEE - discountTotal;
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        mode: "BOOK",
-        rate: airbnbRate,
-        total: finalTotal,
-        nights: nights,
-        discountTotal: discountTotal
-      })
-    };
+    throw new Error("Price not found");
 
   } catch (error) {
-    // If anything crashes (network error, etc.), default to Inquiry
-    console.error("Scraper Error:", error.message);
+    console.error('Scraper Error:', error.message);
     return {
-      statusCode: 200,
-      body: JSON.stringify({ mode: "INQUIRY" })
+      statusCode: 200, // Return 200 so the UI handles the fallback gracefully
+      headers,
+      body: JSON.stringify({ available: false, message: "Use inquiry fallback" })
     };
   }
 };
