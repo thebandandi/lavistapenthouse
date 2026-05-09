@@ -1414,7 +1414,7 @@
 
       <div class="avail-status" id="avail-status"></div>
 
-      <button type="button" class="book-btn" id="book-btn" onclick="handleBook();" style="position: relative; z-index: 9999; cursor: pointer !important;">Check availability</button>
+      <button class="book-btn" id="book-btn" onclick="handleBook()">Check availability</button>
 
       <div class="no-charge-note">You won't be charged yet</div>
 
@@ -1928,10 +1928,7 @@ function rangeHasBooked(ci, co) {
 
 let bookingData = {};
 
-async function onDateChange() {
-  console.log("Date change detected!"); // This lets us see if the code is even waking up
-  const ci = document.getElementById('checkin-input').value;
-  // ... rest of the function
+
 
 async function onDateChange() {
   const ci = document.getElementById('checkin-input').value;
@@ -1994,42 +1991,46 @@ async function onDateChange() {
       bookBtn.disabled = false;
       
       bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
-} else {
+    } else {
       status.className = 'avail-status info';
       status.textContent = 'Special rates apply for these dates.';
       priceBreakdown.style.display = 'none';
       bookBtn.textContent = 'Inquire for Rates';
       bookBtn.disabled = false;
-      // The line is gone!
+      bookBtn.onclick = () => document.getElementById('contactModal').classList.add('open'); 
     }
+  } catch (err) {
+    status.textContent = '⚠️ Connectivity error. Please try again.';
+    console.error(err);
+  }
+}
 
 
 
 function handleBook() {
   const bookBtn = document.getElementById('book-btn');
   
-  // A. Check if we should open the Contact Form (Inquiry)
-  if (bookBtn.textContent.includes("Inquire") || bookBtn.textContent.includes("Check availability")) {
-    
-    // 1. Get dates from the widget to pass to the form
+  // 1. Handle Inquiry Mode
+  if (bookBtn.textContent.includes("Inquire")) {
+    // Grab the dates the user selected in the widget
     const ci = document.getElementById('checkin-input').value;
     const co = document.getElementById('checkout-input').value;
-    
-    // 2. Put them in your specific contact form fields (from your Gmail/Sheets code)
+
+    // Pre-fill your contact form dates
     if (ci) document.getElementById('msg-checkin').value = ci;
     if (co) document.getElementById('msg-checkout').value = co;
 
-    // 3. Open the modal using your site's native function
+    // Use your site's native function to open the form
     if (typeof openModal === "function") {
       openModal('messageModal');
     } else {
-      // Manual fallback if openModal isn't defined
+      // Fallback in case openModal isn't global
       document.getElementById('messageModal').classList.add('open');
     }
-    return; // Stop here!
+    return;
   }
 
-  // B. Handle the "Reserve" button (This only runs if the scraper found a price)
+  // 2. Handle Reserve Mode (when price sync works)
   const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
   document.getElementById('book-summary').textContent = 
     `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
