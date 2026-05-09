@@ -2008,23 +2008,19 @@ async function onDateChange() {
 
 
 function handleBook() {
+  const bookBtn = document.getElementById('book-btn');
+  
+  // If the button says "Inquire", force it to open the contact modal immediately
+  if (bookBtn.textContent.includes("Inquire")) {
+    document.getElementById('contactModal').classList.add('open');
+    return;
+  }
 
-  const ci=document.getElementById('checkin-input').value;
-
-  const co=document.getElementById('checkout-input').value;
-
-  if(!ci||!co){showToast('Please select your dates first','info');return;}
-
-  if(rangeHasBooked(ci,co)){showToast('Some dates unavailable — please adjust','error');return;}
-
-  const d1=new Date(ci),d2=new Date(co);
-
-  const nights=Math.round((d2-d1)/86400000);
-
-  document.getElementById('book-summary').textContent=`${nights} night${nights!==1?'s':''} · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${document.getElementById('guests-display').textContent} · Total: $${document.getElementById('grand-total').textContent} (incl. 5% direct booking discount)`;
-
+  // Otherwise, proceed to the regular booking summary
+  const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
+  document.getElementById('book-summary').textContent = 
+    `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
   document.getElementById('bookModal').classList.add('open');
-
 }
 
 
