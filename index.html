@@ -1414,7 +1414,7 @@
 
       <div class="avail-status" id="avail-status"></div>
 
-      <button class="book-btn" id="book-btn" onclick="handleBook()">Check availability</button>
+      <button type="button" class="book-btn" id="book-btn" onclick="handleBook();" style="position: relative; z-index: 9999; cursor: pointer !important;">Check availability</button>
 
       <div class="no-charge-note">You won't be charged yet</div>
 
@@ -1928,7 +1928,10 @@ function rangeHasBooked(ci, co) {
 
 let bookingData = {};
 
-
+async function onDateChange() {
+  console.log("Date change detected!"); // This lets us see if the code is even waking up
+  const ci = document.getElementById('checkin-input').value;
+  // ... rest of the function
 
 async function onDateChange() {
   const ci = document.getElementById('checkin-input').value;
