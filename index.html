@@ -1922,7 +1922,17 @@ function rangeHasBooked(ci, co) {
 
 }
 
-
+// Ensure checkout is always after check-in
+document.getElementById('checkin-input').addEventListener('change', function() {
+  const ci = this.value;
+  const coInput = document.getElementById('checkout-input');
+  if (ci) {
+    coInput.min = ci; // Prevents selecting a date before check-in
+    if (coInput.value && coInput.value <= ci) {
+      coInput.value = ''; // Clears checkout if it's now invalid
+    }
+  }
+});
 
 
 // =================== BOOKING WIDGET LOGIC ===================
@@ -2008,7 +2018,14 @@ window.addEventListener('click', function(event) {
     document.body.style.overflow = 'auto';
   }
 });
-
+function scrollToBooking() {
+  const widget = document.getElementById('booking-widget');
+  if (widget) {
+    widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    console.error("Booking widget not found on this page.");
+  }
+}
 // =================== STRIPE CHECKOUT ===================
 
 async function initiateStripeCheckout() {
