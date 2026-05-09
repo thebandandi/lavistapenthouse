@@ -1,71 +1,74 @@
 const axios = require('axios');
 
 export const handler = async (event) => {
-  if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
+  // Only allow POST requests
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
   try {
     const { checkIn, checkOut } = JSON.parse(event.body);
     const listingId = "1034347605075023527";
     
-    // 1. Construct the URL to your listing with the specific dates
+    // Construct the Airbnb URL for the specific stay dates
     const url = `https://www.airbnb.com/rooms/${listingId}?check_in=${checkIn}&check_out=${checkOut}`;
 
-    // 2. Fetch the page data
-    // Note: We use a User-Agent header so Airbnb sees us as a standard browser
+    // Fetch the page using "Stealth Headers" to look like a real browser
     const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.9',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+        'referer': 'https://www.google.com/'
+      },
+      timeout: 8000 // Give it 8 seconds to respond
     });
 
     const html = response.data;
-
-    // 3. Extract the price using a Regular Expression (looking for the price string in the metadata)
-    // This looks for patterns like "$350" or "350" followed by "per night"
-    const priceMatch = html.match(/"amount":(\d+),"amountFormatted":"\$(\d+)"/);
     
-    let airbnbRate = null;
-
-    if (priceMatch && priceMatch[1]) {
-      airbnbRate = parseInt(priceMatch[1]);
-    }
+    // Attempt to extract the nightly rate from Airbnb's internal data 
+    const priceMatch = html.match(/"amount":(\d+),"amountFormatted":"\$(\d+)"/);
+    let airbnbRate = priceMatch ? parseInt(priceMatch[1]) : null;
 
     // --- SAFETY CHECK ---
-    // If Airbnb blocks the scrape or the price isn't found, we stay in INQUIRY mode
+    // If the price is missing (blocked or unavailable), switch to Inquiry mode
     if (!airbnbRate || isNaN(airbnbRate)) {
-      console.log("Price not found for dates, defaulting to Inquiry.");
+      console.log("Price not found or blocked by Airbnb. Switching to Inquiry mode.");
       return {
         statusCode: 200,
         body: JSON.stringify({ mode: "INQUIRY" })
       };
     }
 
-    // --- CALCULATION (Direct Booking Logic) ---
+    // --- CALCULATION LOGIC ---
     const CLEANING_FEE = 75;
     const start = new Date(checkIn);
     const end = new Date(checkOut);
     const nights = Math.round((end - start) / 86400000);
     
     const subtotal = airbnbRate * nights;
-    const discount = Math.round(subtotal * 0.05); // Your 5% direct discount
-    const total = subtotal + CLEANING_FEE - discount;
+    const discountTotal = Math.round(subtotal * 0.05); // 5% Direct Booking Discount
+    const finalTotal = subtotal + CLEANING_FEE - discountTotal;
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         mode: "BOOK",
         rate: airbnbRate,
-        total: total,
+        total: finalTotal,
         nights: nights,
-        discountTotal: discount
+        discountTotal: discountTotal
       })
     };
 
   } catch (error) {
+    // If anything crashes (network error, etc.), default to Inquiry
     console.error("Scraper Error:", error.message);
     return {
       statusCode: 200,
-      body: JSON.stringify({ mode: "INQUIRY", error: "Sync temporarily unavailable" })
+      body: JSON.stringify({ mode: "INQUIRY" })
     };
   }
 };
