@@ -1928,8 +1928,7 @@ function rangeHasBooked(ci, co) {
 // =================== BOOKING WIDGET LOGIC ===================
 let bookingData = {};
 
-async function onDateChange() {
-  const ci = document.getElementById('checkin-input').value;
+async function onDateChange() {const ci = document.getElementById('checkin-input').value;
   const co = document.getElementById('checkout-input').value;
   const status = document.getElementById('avail-status');
   const bookBtn = document.getElementById('book-btn');
@@ -1945,43 +1944,42 @@ async function onDateChange() {
     const data = await response.json();
 
     if (data.available && data.totalPrice > 0) {
-      bookingData = { 
-        checkin: ci, checkout: co, guests: document.getElementById('adults-count').textContent, 
-        total: data.totalPrice, nights: data.nights 
-      };
+      bookingData = { checkin: ci, checkout: co, total: data.totalPrice, nights: data.nights };
       status.className = 'avail-status available';
       status.textContent = 'Dates are available!';
       bookBtn.textContent = 'Reserve Now';
-      document.getElementById('nightly-label').textContent = `$${data.nightlyPrice} × ${data.nights} night${data.nights > 1 ? 's' : ''}`;
-      document.getElementById('nightly-total').textContent = `$${data.nightlyPrice * data.nights}`;
+      
+      document.getElementById('nightly-label').textContent = `$${data.nightlyPrice} × ${data.nights} nights`;
       document.getElementById('grand-total').textContent = `$${data.totalPrice}`;
       priceBreakdown.style.display = 'block';
     } else {
-      throw new Error("Price not found");
+      throw new Error("No price");
     }
   } catch (err) {
+    // FALLBACK: If scraper fails, transform the button into an Inquiry button
     status.className = 'avail-status info';
     status.textContent = 'Special rates apply for these dates.';
     bookBtn.textContent = 'Inquire for Rates';
     priceBreakdown.style.display = 'none';
   } finally {
     bookBtn.disabled = false;
-  }
-}
+  }}
 
-function handleBook() {
-  const btnText = document.getElementById('book-btn').textContent;
+function handleBook() {const btnText = document.getElementById('book-btn').textContent;
   const ci = document.getElementById('checkin-input').value;
   const co = document.getElementById('checkout-input').value;
 
+  // If the button says "Inquire" or "Check", it opens your message form
   if (btnText.includes('Inquire') || btnText.includes('Check')) {
     if (ci) document.getElementById('msg-checkin').value = ci;
     if (co) document.getElementById('msg-checkout').value = co;
+    
+    // This triggers your existing modal logic
     openModal('messageModal'); 
   } else {
+    // This triggers your Stripe booking logic
     openModal('bookModal');
-  }
-}
+  }}
 // KEEP ALL YOUR sendMessage, MAKE.COM, AND SHEETS CODE BELOW THIS LINE
 
 
