@@ -1991,46 +1991,42 @@ async function onDateChange() {
       bookBtn.disabled = false;
       
       bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
-    } else {
+} else {
       status.className = 'avail-status info';
       status.textContent = 'Special rates apply for these dates.';
       priceBreakdown.style.display = 'none';
       bookBtn.textContent = 'Inquire for Rates';
       bookBtn.disabled = false;
-      bookBtn.onclick = () => document.getElementById('contactModal').classList.add('open'); 
+      // The line is gone!
     }
-  } catch (err) {
-    status.textContent = '⚠️ Connectivity error. Please try again.';
-    console.error(err);
-  }
-}
 
 
 
 function handleBook() {
   const bookBtn = document.getElementById('book-btn');
   
-  // 1. Handle Inquiry Mode
-  if (bookBtn.textContent.includes("Inquire")) {
-    // Grab the dates the user selected in the widget
+  // A. Check if we should open the Contact Form (Inquiry)
+  if (bookBtn.textContent.includes("Inquire") || bookBtn.textContent.includes("Check availability")) {
+    
+    // 1. Get dates from the widget to pass to the form
     const ci = document.getElementById('checkin-input').value;
     const co = document.getElementById('checkout-input').value;
-
-    // Pre-fill your contact form dates
+    
+    // 2. Put them in your specific contact form fields (from your Gmail/Sheets code)
     if (ci) document.getElementById('msg-checkin').value = ci;
     if (co) document.getElementById('msg-checkout').value = co;
 
-    // Use your site's native function to open the form
+    // 3. Open the modal using your site's native function
     if (typeof openModal === "function") {
       openModal('messageModal');
     } else {
-      // Fallback in case openModal isn't global
+      // Manual fallback if openModal isn't defined
       document.getElementById('messageModal').classList.add('open');
     }
-    return;
+    return; // Stop here!
   }
 
-  // 2. Handle Reserve Mode (when price sync works)
+  // B. Handle the "Reserve" button (This only runs if the scraper found a price)
   const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
   document.getElementById('book-summary').textContent = 
     `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
