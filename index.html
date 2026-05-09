@@ -1414,7 +1414,7 @@
 
       <div class="avail-status" id="avail-status"></div>
 
-      <button class="book-btn" id="book-btn" onclick="handleBook()">Check availability</button>
+      <button type="button" class="book-btn" id="book-btn" onclick="handleBook()" style="position: relative; z-index: 100; cursor: pointer !important;">Check availability</button>
 
       <div class="no-charge-note">You won't be charged yet</div>
 
@@ -1924,130 +1924,71 @@ function rangeHasBooked(ci, co) {
 
 
 
-// =================== BOOKING WIDGET ===================
-
+<script>
+// =================== BOOKING WIDGET LOGIC ===================
 let bookingData = {};
-
-
 
 async function onDateChange() {
   const ci = document.getElementById('checkin-input').value;
   const co = document.getElementById('checkout-input').value;
   const status = document.getElementById('avail-status');
-  const priceBreakdown = document.getElementById('price-breakdown');
   const bookBtn = document.getElementById('book-btn');
+  const priceBreakdown = document.getElementById('price-breakdown');
 
-  if (!ci || !co) { status.style.display = 'none'; return; }
+  if (!ci || !co) return;
 
-  const d1 = new Date(ci), d2 = new Date(co);
-  if (d2 <= d1) { 
-    showToast('Checkout must be after check-in', 'error'); 
-    status.style.display = 'none'; 
-    return; 
-  }
-
-  const nights = Math.round((d2 - d1) / 86400000);
-  if (nights < CONFIG.MIN_NIGHTS) { 
-    showToast(`Minimum ${CONFIG.MIN_NIGHTS} night stay`, 'info'); 
-    status.style.display = 'none'; 
-    return; 
-  }
-
-  if (rangeHasBooked(ci, co)) {
-    status.className = 'avail-status unavailable';
-    status.textContent = '❌ Some dates in this range are unavailable.';
-    bookBtn.textContent = 'Check availability';
-    priceBreakdown.style.display = 'none';
-    return;
-  }
-
-  // Show "Thinking" state
-  status.className = 'avail-status info';
-  status.textContent = 'Fetching live direct-booking rates...';
+  bookBtn.textContent = 'Checking...';
   bookBtn.disabled = true;
 
   try {
-    const response = await fetch('/.netlify/functions/get-price', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checkIn: ci, checkOut: co })
-    });
-
+    const response = await fetch(`/.netlify/functions/get-price?checkIn=${ci}&checkOut=${co}`);
     const data = await response.json();
 
-    if (data.mode === "BOOK") {
+    if (data.available && data.totalPrice > 0) {
+      bookingData = { 
+        checkin: ci, checkout: co, guests: document.getElementById('adults-count').textContent, 
+        total: data.totalPrice, nights: data.nights 
+      };
       status.className = 'avail-status available';
-      status.textContent = '✅ Available! Direct discount applied.';
-      
-      document.getElementById('nightly-label').textContent = `$${data.rate} × ${nights} nights`;
-      document.getElementById('nightly-total').textContent = `$${(data.rate * nights)}`;
-      document.getElementById('discount-row').style.display = 'flex';
-      document.getElementById('discount-amount').textContent = `-$${data.discountTotal}`;
-      document.getElementById('grand-total').textContent = `$${data.total}`;
-      document.getElementById('pay-total').textContent = `· $${data.total}`;
-      
+      status.textContent = 'Dates are available!';
+      bookBtn.textContent = 'Reserve Now';
+      document.getElementById('nightly-label').textContent = `$${data.nightlyPrice} × ${data.nights} night${data.nights > 1 ? 's' : ''}`;
+      document.getElementById('nightly-total').textContent = `$${data.nightlyPrice * data.nights}`;
+      document.getElementById('grand-total').textContent = `$${data.totalPrice}`;
       priceBreakdown.style.display = 'block';
-      bookBtn.textContent = 'Reserve';
-      bookBtn.disabled = false;
-      
-      bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
     } else {
-      status.className = 'avail-status info';
-      status.textContent = 'Special rates apply for these dates.';
-      priceBreakdown.style.display = 'none';
-      bookBtn.textContent = 'Inquire for Rates';
-      bookBtn.disabled = false;
-      bookBtn.onclick = () => document.getElementById('contactModal').classList.add('open'); 
+      throw new Error("Price not found");
     }
   } catch (err) {
-    status.textContent = '⚠️ Connectivity error. Please try again.';
-    console.error(err);
+    status.className = 'avail-status info';
+    status.textContent = 'Special rates apply for these dates.';
+    bookBtn.textContent = 'Inquire for Rates';
+    priceBreakdown.style.display = 'none';
+  } finally {
+    bookBtn.disabled = false;
   }
 }
-
-
 
 function handleBook() {
-  const bookBtn = document.getElementById('book-btn');
-  
-  // 1. Handle Inquiry Mode
-  if (bookBtn.textContent.includes("Inquire")) {
-    // Grab the dates the user selected in the widget
-    const ci = document.getElementById('checkin-input').value;
-    const co = document.getElementById('checkout-input').value;
+  const btnText = document.getElementById('book-btn').textContent;
+  const ci = document.getElementById('checkin-input').value;
+  const co = document.getElementById('checkout-input').value;
 
-    // Pre-fill your contact form dates
+  if (btnText.includes('Inquire') || btnText.includes('Check')) {
     if (ci) document.getElementById('msg-checkin').value = ci;
     if (co) document.getElementById('msg-checkout').value = co;
-
-    // Use your site's native function to open the form
-    if (typeof openModal === "function") {
-      openModal('messageModal');
-    } else {
-      // Fallback in case openModal isn't global
-      document.getElementById('messageModal').classList.add('open');
-    }
-    return;
-  }
-
-  // 2. Handle Reserve Mode (when price sync works)
-  const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
-  document.getElementById('book-summary').textContent = 
-    `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
-  
-  if (typeof openModal === "function") {
-    openModal('bookModal');
+    openModal('messageModal'); 
   } else {
-    document.getElementById('bookModal').classList.add('open');
+    openModal('bookModal');
   }
 }
-
-
 
 function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
 
 function scrollToBooking() { document.getElementById('booking-widget').scrollIntoView({behavior:'smooth',block:'center'}); }
 
+// KEEP ALL YOUR sendMessage, MAKE.COM, AND SHEETS CODE BELOW THIS LINE
+</script>
 
 
 // =================== STRIPE CHECKOUT ===================
