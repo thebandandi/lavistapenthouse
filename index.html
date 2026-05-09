@@ -2010,13 +2010,28 @@ async function onDateChange() {
 function handleBook() {
   const bookBtn = document.getElementById('book-btn');
   
-  // If the button says "Inquire", force it to open the contact modal immediately
+  // 1. If it's an Inquiry, open the form and fill in the dates
   if (bookBtn.textContent.includes("Inquire")) {
-    document.getElementById('contactModal').classList.add('open');
+    const checkin = document.getElementById('checkin-input').value;
+    const checkout = document.getElementById('checkout-input').value;
+
+    // Prepopulate the contact form fields
+    if (checkin) document.getElementById('msg-checkin').value = checkin;
+    if (checkout) document.getElementById('msg-checkout').value = checkout;
+
+    // Open your specific modal (it's named messageModal in your code)
+    const modal = document.getElementById('messageModal');
+    if (modal) {
+      modal.classList.add('open');
+    } else {
+      // Fallback if the class 'open' isn't what your CSS uses
+      showToast('Opening contact form...', 'info');
+      document.getElementById('messageModal').style.display = 'block';
+    }
     return;
   }
 
-  // Otherwise, proceed to the regular booking summary
+  // 2. Otherwise, proceed to the regular booking summary
   const d1 = new Date(bookingData.checkin), d2 = new Date(bookingData.checkout);
   document.getElementById('book-summary').textContent = 
     `${bookingData.nights} nights · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
