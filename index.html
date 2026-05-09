@@ -14,7 +14,7 @@
 
 <title>La Vista Penthouse | Luxury Vacation Rental Cabo San Lucas | Private Rooftop Jacuzzi & Bay Views</title>
 
-<meta name="description" content="Book La Vista Penthouse in Cabo San Lucas directly and save. Luxury 3-bedroom penthouse with private rooftop jacuzzi, stunning Arch & Bay views, infinity pool, and 5-star hosting. Sleeps 6. From $350/night.">
+<meta name="description" content="Book La Vista Penthouse in Cabo San Lucas directly and save. Luxury 3-bedroom penthouse with private rooftop jacuzzi, stunning Arch & Bay views, infinity pool, and 5-star hosting. Sleeps 6.">
 
 <meta name="keywords" content="Cabo San Lucas vacation rental, Cabo penthouse rental, luxury rental Cabo, private jacuzzi Cabo, Cabo San Lucas Airbnb, rooftop penthouse Cabo, Arch view rental Cabo, 3 bedroom rental Cabo San Lucas, direct booking Cabo">
 
@@ -108,8 +108,6 @@
 
   "email": "host@lavistapenthouse.com",
 
-  "priceRange": "$350 - $500 per night",
-
   "starRating": {
 
     "@type": "Rating",
@@ -184,7 +182,7 @@
 
      → dashboard.stripe.com/products
 
-       Create a product "Nightly Stay" at $350 (one-time payment)
+       Create a product "Nightly Stay" (Price determined by widget)
 
        STRIPE_PRICE_ID : the price ID shown (price_...)
 
@@ -1364,7 +1362,7 @@
 
     <div class="booking-widget" id="booking-widget">
 
-      <div class="price-line"><span class="price">$350</span><span class="per"> / night</span></div>
+      <div class="price-line"><span class="price"></span><span class="per"> / night</span></div>
 
       <div class="widget-rating">★ <strong>5.0</strong> · 5 reviews · <span class="guest-fav" style="font-size:11px;">Guest Favorite</span></div>
 
@@ -1424,7 +1422,10 @@
 
         <hr class="divider" style="margin:16px 0;">
 
-        <div class="price-row"><span id="nightly-label">$350 × 1 night</span><span id="nightly-total">$350</span></div>
+        <div class="price-row">
+  <span id="nightly-label"></span>
+  <span id="nightly-total"></span>
+</div>
 
         <div class="price-row"><span>Cleaning fee</span><span>$75</span></div>
 
