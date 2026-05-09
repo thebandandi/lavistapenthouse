@@ -227,32 +227,15 @@
 <script>
 
   const CONFIG = {
-
     // ── Stripe ──────────────────────────────────────────────────────────────
-
     STRIPE_PUBLISHABLE_KEY: "pk_live_51NOWfHECQ07bC2gu3tb5vc3JhWayPJmQh5QOJzXpFio0s8m1eaxM2X6jg0qeRwBNbEc5vwcvvWqK1H0Wjb3Mz4gQ00SwPuf7kz",
-
     STRIPE_PRICE_ID:        "price_1TBKQTECQ07bC2guWHttHKrO",
 
-
-
-    // ── SendGrid emails are sent server-side via Netlify Functions ──────────
-
-    // No keys needed here — add SENDGRID_API_KEY to Netlify Environment Variables
-
-
-
-// ── Pricing (Managed via Netlify Functions) ─────────────────────────────
-// The rate is now fetched dynamically to ensure parity with Airbnb/DPGO
-
+    // ── Pricing (Now Managed via Netlify Function) ──────────────────────────
     CLEANING_FEE:           75,
-
     MAX_GUESTS:             6,
-
     MIN_NIGHTS:             2,
-
   };
-
 
 
 // 1. CLEAR THE MANUAL BLOCKS
@@ -1923,18 +1906,109 @@ function rangeHasBooked(ci, co) {
 
 
 
-// =================== BOOKING WIDGET ===================
+// =================== SECURE DYNAMIC BOOKING WIDGET ===================
+let bookingData = {};
+
+async function onDateChange() {
+  const ci = document.getElementById('checkin-input').value;
+  const co = document.getElementById('checkout-input').value;
+  const status = document.getElementById('avail-status');
+  const priceBreakdown = document.getElementById('price-breakdown');
+  const bookBtn = document.getElementById('book-btn');
+
+  if (!ci || !co) { status.style.display = 'none'; return; }
+
+  const d1 = new Date(ci), d2 = new Date(co);
+  if (d2 <= d1) { 
+    showToast('Checkout must be after check-in', 'error'); 
+    status.style.display = 'none'; 
+    return; 
+  }
+
+  const nights = Math.round((d2 - d1) / 86400000);
+  if (nights < CONFIG.MIN_NIGHTS) { 
+    showToast(`Minimum ${CONFIG.MIN_NIGHTS} night stay`, 'info'); 
+    status.style.display = 'none'; 
+    return; 
+  }
+
+  // 1. Check local calendar for block-out dates
+  if (rangeHasBooked(ci, co)) {
+    status.className = 'avail-status unavailable';
+    status.textContent = '❌ Dates unavailable. Please adjust.';
+    bookBtn.textContent = 'Check availability';
+    priceBreakdown.style.display = 'none';
+    return;
+  }
+
+  // 2. Fetch price from Netlify Function
+  status.className = 'avail-status info';
+  status.textContent = 'Fetching live direct rates...';
+  bookBtn.disabled = true;
+
+  try {
+    const response = await fetch('/.netlify/functions/get-price', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checkIn: ci, checkOut: co })
+    });
+
+    const data = await response.json();
+
+    if (data.mode === "BOOK") {
+      // INSTANT BOOK MODE
+      status.className = 'avail-status available';
+      status.textContent = '✅ Dates available! Direct discount applied.';
+      
+      document.getElementById('nightly-label').textContent = `$${data.rate} × ${nights} nights`;
+      document.getElementById('nightly-total').textContent = `$${(data.rate * nights)}`;
+      document.getElementById('discount-row').style.display = 'flex';
+      document.getElementById('discount-amount').textContent = `-$${data.discountTotal}`;
+      document.getElementById('grand-total').textContent = `$${data.total}`;
+      document.getElementById('pay-total').textContent = `· $${data.total}`;
+      
+      priceBreakdown.style.display = 'block';
+      bookBtn.textContent = 'Reserve';
+      bookBtn.disabled = false;
+      
+      bookingData = { checkin: ci, checkout: co, nights, total: data.total, guests: document.getElementById('guests-display').textContent };
+    } else {
+      // INQUIRY MODE (Price not found or syncing)
+      status.className = 'avail-status info';
+      status.textContent = 'Special rates apply for these dates.';
+      priceBreakdown.style.display = 'none';
+      bookBtn.textContent = 'Inquire for Rates';
+      bookBtn.disabled = false;
+      // Redirect click to open contact form
+      bookBtn.onclick = () => document.getElementById('contactModal').classList.add('open'); 
+    }
+  } catch (err) {
+    status.textContent = '⚠️ Connectivity error. Please refresh.';
+    console.error("Pricing fetch failed:", err);
+  }
+}
 
 function handleBook() {
   const ci = document.getElementById('checkin-input').value;
   const co = document.getElementById('checkout-input').value;
-  if (!ci || !co || !bookingData.total) { showToast('Please select your dates first', 'info'); return; }
   
+  if (!ci || !co) {
+    showToast('Please select your dates first', 'info');
+    return;
+  }
+  
+  // Safety check: if button says Inquire, open contact form instead
+  if (document.getElementById('book-btn').textContent.includes("Inquire")) {
+    document.getElementById('contactModal').classList.add('open');
+    return;
+  }
+
   const d1 = new Date(ci), d2 = new Date(co);
-  
-  // Use the total from the API call
-  document.getElementById('book-summary').textContent = `${bookingData.nights} night${bookingData.nights !== 1 ? 's' : ''} · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total} (Direct Discount Included)`;
-  
+  const nights = Math.round((d2 - d1) / 86400000);
+
+  document.getElementById('book-summary').textContent = 
+    `${nights} night${nights !== 1 ? 's' : ''} · Check-in ${fmtDate(d1)}, Checkout ${fmtDate(d2)} · ${bookingData.guests} · Total: $${bookingData.total}`;
+
   document.getElementById('bookModal').classList.add('open');
 }
 
